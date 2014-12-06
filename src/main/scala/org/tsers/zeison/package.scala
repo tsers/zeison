@@ -14,6 +14,19 @@ package object zeison {
     jvalueFromValue(JSONValue.parse(input))
   }
 
+  def render(json: JValue): String = {
+    json match {
+      case JNull           => "null"
+      case JBoolean(value) => JSONValue.toJSONString(value)
+      case JInt(value)     => JSONValue.toJSONString(value)
+      case JDouble(value)  => JSONValue.toJSONString(value)
+      case JString(value)  => JSONValue.toJSONString(value)
+      case JObject(value)  => JSONValue.toJSONString(value)
+      case JArray(value)   => JSONValue.toJSONString(value)
+    }
+  }
+
+
   private def traverseObject(obj: JSONObject, field: String): JValue = {
     if (obj.containsKey(field)) {
       jvalueFromValue(obj.get(field))
