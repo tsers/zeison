@@ -1,6 +1,10 @@
 package org.tsers
 
-import net.minidev.json.{JSONArray, JSONValue, JSONObject}
+import java.lang
+
+import net.minidev.json.{JSONArray, JSONObject, JSONValue}
+
+import scala.collection.JavaConversions
 
 
 package object zeison {
@@ -39,8 +43,29 @@ package object zeison {
     }
   }
 
+  implicit class IterableJValue(jValue: JValue) extends Iterable[JValue] {
+    def iterator: Iterator[JValue] = jValue match {
+      case JArray(value) => JavaConversions.asScalaIterator(value.iterator()).map(jvalueFromValue)
+      case _             => throw new RuntimeException(s"Child iterators not supported by clsee: $getClass")
+    }
+  }
+
+  implicit def iterableToJValue(iterable: Iterable[JValue]) = {
+    val arr = new JSONArray()
+    iterable.foreach {
+      case JNull           => arr.add(null)
+      case JBoolean(value) => arr.add(new lang.Boolean(value))
+      case JInt(value)     => arr.add(new lang.Integer(value))
+      case JDouble(value)  => arr.add(new lang.Double(value))
+      case JString(value)  => arr.add(value)
+      case JObject(value)  => arr.add(value)
+      case JArray(value)   => arr.add(value)
+    }
+    JArray(arr)
+  }
 
   sealed abstract class JValue extends Dynamic {
+
     def selectDynamic(field: String): JValue = this match {
       case JObject(value) => traverseObject(value, field)
       case _              => throw new OperationNotSupported(field, getClass)
@@ -54,6 +79,8 @@ package object zeison {
     def applyDynamic(field: String)(key: Any): JValue = {
       selectDynamic(field).apply(key)
     }
+
+    def asJValue: JValue = this
 
     def asBoolean: Boolean = this match {
       case JBoolean(value) => value
@@ -74,7 +101,9 @@ package object zeison {
       case JDouble(value) => value
       case _           => throw new OperationNotSupported("asDouble", getClass)
     }
+
   }
+
 
   case object JNull extends JValue
 
