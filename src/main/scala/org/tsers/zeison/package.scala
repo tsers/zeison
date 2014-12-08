@@ -32,16 +32,37 @@ package object zeison {
     }
   }
 
+  object obj {
+    def apply(fields: (String, Any)*): JObject = from(fields)
+
+    def from(fields: Iterable[(String, _)]): JObject = {
+      JObject(fields.flatMap {
+        case (f: String, jValue: JValue) => valueOf(jValue).map(value => (f, value))
+        case (f: String, value)          => Some(f, toAnyRef(value))
+      }.toMap)
+    }
+
+    def empty = JObject(Map.empty)
+  }
+
+  object arr {
+    def apply(elems: Any*): JArray = from(elems)
+
+    def from(iterable: Iterable[_]): JArray = {
+      JArray(iterable.flatMap {
+        case jValue: JValue => valueOf(jValue)
+        case value          => Some(toAnyRef(value))
+      }.toSeq)
+    }
+
+    def empty = JArray(Nil)
+  }
+
+
   def render(json: JValue): String = {
-    json match {
-      case JUndefined      => throw new ZeisonException("Can't render undefined value")
-      case JNull           => "null"
-      case JBoolean(value) => JSONValue.toJSONString(value)
-      case JInt(value)     => JSONValue.toJSONString(value)
-      case JDouble(value)  => JSONValue.toJSONString(value)
-      case JString(value)  => JSONValue.toJSONString(value)
-      case JObject(value)  => JSONValue.toJSONString(value)
-      case JArray(value)   => JSONValue.toJSONString(value)
+    valueOf(json) match {
+      case Some(value) => JSONValue.toJSONString(value)
+      case None        => throw new ZeisonException("Can't render undefined value")
     }
   }
 
@@ -136,10 +157,9 @@ package object zeison {
   }
 
   implicit class TraversableJValue(jValue: JValue) extends Traversable[JValue] {
-    import scala.collection.JavaConversions._
     override def foreach[U](f: (JValue) => U): Unit = {
       jValue match {
-        case JArray(value) => asScalaBuffer(value).map(toJValue).foreach(f)
+        case JArray(value) => value.map(toJValue).foreach(f)
         case _             =>
       }
     }
@@ -157,32 +177,29 @@ package object zeison {
 
   case class JDouble(value: Double) extends JValue
 
-  case class JObject(value: JSONObject) extends JValue
+  case class JObject(value: Map[String, AnyRef]) extends JValue
 
-  case class JArray(value: JSONArray) extends JValue
+  case class JArray(value: Seq[AnyRef]) extends JValue
 
 
   class ZeisonException(msg: String) extends RuntimeException(msg)
 
 
-  private def traverseObject(obj: JSONObject, field: String): JValue = {
-    if (obj.containsKey(field)) {
-      toJValue(obj.get(field))
-    } else {
-      JUndefined
-    }
+  private def traverseObject(obj: Map[String, AnyRef], field: String): JValue = {
+    obj.get(field).map(toJValue).getOrElse(JUndefined)
   }
 
-  private def traverseArray(arr: JSONArray, index: Int): JValue = {
-    val len = arr.size()
+  private def traverseArray(arr: Seq[AnyRef], index: Int): JValue = {
+    val len = arr.size
     if (index >= 0 && index < len) {
-      toJValue(arr.get(index))
+      toJValue(arr(index))
     } else {
       JUndefined
     }
   }
 
   private def toJValue(anyValue: Any): JValue = {
+    import scala.collection.JavaConversions._
     anyValue match {
       case null              => JNull
       case value: Boolean    => JBoolean(value)
@@ -191,25 +208,41 @@ package object zeison {
       case value: Float      => JDouble(value)
       case value: Double     => JDouble(value)
       case value: BigDecimal => JDouble(value.doubleValue())
+      case value: Char       => JString(value.toString)
       case value: String     => JString(value)
-      case value: JSONObject => JObject(value)
-      case value: JSONArray  => JArray(value)
+      case value: JSONObject => JObject(mapAsScalaMap(value))
+      case value: JSONArray  => JArray(asScalaBuffer(value))
       case value             => throw new ZeisonException(s"Can't parse value ($value) to JValue")
     }
   }
 
-  /*
+  private def toAnyRef(anyValue: Any): AnyRef = {
+    anyValue match {
+      case null              => null
+      case value: Boolean    => new java.lang.Boolean(value)
+      case value: Byte       => new java.lang.Long(value)
+      case value: Short      => new java.lang.Long(value)
+      case value: Int        => new java.lang.Long(value)
+      case value: Long       => new java.lang.Long(value)
+      case value: Float      => new java.lang.Double(value)
+      case value: Double     => new java.lang.Double(value)
+      case value: Char       => value.toString
+      case value: AnyRef     => value
+      case value             => throw new ZeisonException(s"Unsupported value type (${value.getClass}): $value")
+    }
+  }
+
   private def valueOf(jValue: JValue): Option[AnyRef] = {
+    import scala.collection.JavaConversions._
     jValue match {
       case JUndefined      => None
       case JNull           => Some(null)
-      case JBoolean(value) => Some(new lang.Boolean(value))
-      case JInt(value)     => Some(new lang.Long(value))
-      case JDouble(value)  => Some(new lang.Double(value))
+      case JBoolean(value) => Some(new java.lang.Boolean(value))
+      case JInt(value)     => Some(new java.lang.Long(value))
+      case JDouble(value)  => Some(new java.lang.Double(value))
       case JString(value)  => Some(value)
-      case JObject(value)  => Some(value)
-      case JArray(value)   => Some(value)
+      case JObject(value)  => Some(mapAsJavaMap(value))
+      case JArray(value)   => Some(seqAsJavaList(value))
     }
   }
-  */
 }
