@@ -39,15 +39,15 @@ object Examples extends App {
 
   // TRAVERSAL
 
-  println(json.firstName.asString)                        // -> "John"
+  println(json.firstName.toStr)                        // -> "John"
 
-  println(json.age.asInt)                                 // -> 25
+  println(json.age.toInt)                              // -> 25
 
-  println(json.address.city.asString)                     // ->"New York"
+  println(json.address.city.toStr)                     // ->"New York"
 
-  println(json.phoneNumber(0).number.asString)            // -> "212 555-1234"
+  println(json.phoneNumber(0).number.toStr)            // -> "212 555-1234"
 
-  println(json.phoneNumber.map(_.`type`.asString).toSeq)  // -> Seq("home", "fax")
+  println(json.phoneNumber.map(_.`type`.toStr).toSeq)  // -> Seq("home", "fax")
 
   
   // RENDERING
