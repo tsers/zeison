@@ -1,58 +1,95 @@
 # Zeison
 
-Small, easy and fast JSON library for Scala
+Small, easy and fast JSON library for Scala.
 
-**TODO:** docs
+## Motivation
 
-## Examples
-    
-```scala    
-object Examples extends App {
-  import org.tsers.zeison._
+JSON is a simple format - most Scala JSON "frameworks" are not. There are tons of
+transient dependencies, DSLs and implicit conversions. This library tries to simplify
+the JSON parsing in Scala so that it feels almost like coding JavaScript. 
 
-  // PARSING
-
-  val json = parse("""
-      | {
-      |   "firstName": "John",
-      |   "lastName": "Smith",
-      |   "age": 25,
-      |   "address": {
-      |     "streetAddress": "21 2nd Street",
-      |     "city": "New York",
-      |     "state": "NY",
-      |     "postalCode": "10021"
-      |   },
-      |   "phoneNumber": [
-      |     {
-      |       "type": "home",
-      |       "number": "212 555-1234"
-      |     },
-      |     {
-      |       "type": "fax",
-      |       "number": "646 555-4567"
-      |     }
-      |   ]
-      | }
-    """.stripMargin)
+No hidden dependencies! Only [json-smart](https://code.google.com/p/json-smart/).
 
 
-  // TRAVERSAL
+## Usage
 
-  println(json.firstName.toStr)                        // -> "John"
+To use zeison, add `import org.tsers.zeison._` to your imports
 
-  println(json.age.toInt)                              // -> 25
+### Parsing
 
-  println(json.address.city.toStr)                     // ->"New York"
+```scala
+// parse: (String) => JValue
+// parse: (java.io.Reader) => JValue
+// parse: (InputStream) => JValue
+val json = parse("""{ "hello": "zeison!" }""")
+```
 
-  println(json.phoneNumber(0).number.toStr)            // -> "212 555-1234"
+### Navigating
 
-  println(json.phoneNumber.map(_.`type`.toStr).toSeq)  // -> Seq("home", "fax")
+```scala
+val json = parse("""
+    | {
+    |   "messages": ["tsers", {"msg": "tsers!"}],
+    |   "meta": {
+    |     "numKeys": 2,
+    |     "active": true,
+    |     "score": 0.6
+    |   },
+    |   "response": null
+    | }""".stripMargin)
 
-  
-  // RENDERING
+// conversions
+assert(json.meta.numKeys.toInt == 2)
+assert(json.meta.active.toBool == true)
+assert(json.meta.score.toDouble == 0.6)
+assert(json.meta.toMap.get("numKeys").map(_.toInt) == Some(2))
+assert(json.messages.toSeq.head.toStr == "tsers")
 
-  println(render(json.phoneNumber(0)))  // -> {"number":"212 555-1234","type":"home"}
+// type checking
+assert(json.meta.numKeys.isInt == true) // also .isStr .isBool .isDouble .isArray .isObject .isNull .isDefined
 
-}
+// traversing
+assert(json("meta")("numKeys").toInt == 2)
+assert(json.messages(0).toStr == "tsers")
+assert(json.messages(1).msg.toStr == "tsers!")
+assert(json.messages.filter(_.isObject).map(_.msg.toStr).toSeq == Seq("tsers!"))
+
+// undefined values
+assert(json.meta.numKeys.isDefined == true)
+assert(json.non_existing.isDefined == false)
+assert(json.messages(-1).isDefined == false)
+assert(json.messages(10).isDefined == false)
+assert(json.meta.numKeys.toOption.map(_.toInt) == Some(2))
+assert(json.non_existing.toOption == None)
+assert(json.response.toOption == None)
+
+// exceptions
+assert(Try(json.messages.toInt).isSuccess == false)         // bad type cast
+assert(Try(json.non_existing.toInt).isSuccess == false)     // undefined has no value
+assert(Try(json.non_existing.sub_field).isSuccess == false) // undefined has no member x
+```
+
+### Manipulation and rendering
+
+**Attention!** Only valid JSON data types are accepted (e.g. Date must be formatted before
+the object building/rendering is done)
+
+```scala
+val src = parse("""
+    | {
+    |   "meta": {
+    |     "numKeys": 2
+    |   },
+    |   "response": null
+    | }""".stripMargin)
+
+// building objects with obj/arr
+assert(render(obj("msg" -> "tsers!", "meta" -> src.meta)) == """{"msg":"tsers!","meta":{"numKeys":2}}""")
+assert(render(arr(1, obj("msg" -> "tsers!"))) == """[1,{"msg":"tsers!"}]""")
+
+// building objects from Scala collections
+val primes = Seq(1,2,3,5)
+assert(render(arr.from(primes)) == "[1,2,3,5]")
+val config = Map("version" -> 2)
+assert(render(obj.from(config)) == """{"version":2}""")
 ```
