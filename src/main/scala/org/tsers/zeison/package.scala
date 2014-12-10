@@ -2,10 +2,11 @@ package org.tsers
 
 import java.io.InputStream
 
+import net.minidev.json
 import net.minidev.json.{JSONArray, JSONObject, JSONValue}
 
-import scala.collection.Map
-import scala.util.{Try, Failure, Success}
+import scala.collection.{JavaConversions, Map}
+import scala.util.{Failure, Success, Try}
 
 
 package object zeison {
@@ -14,7 +15,7 @@ package object zeison {
   def parse(input: String): JValue = {
     Try(toJValue(JSONValue.parseWithException(input))) match {
       case Success(json) => json
-      case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: $e")
+      case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: ${e.getMessage}", e)
     }
   }
 
@@ -36,26 +37,35 @@ package object zeison {
     def apply(fields: (String, Any)*): JObject = from(fields)
 
     def from(fields: Iterable[(String, _)]): JObject = {
-      JObject(fields.flatMap {
-        case (f: String, jValue: JValue) => valueOf(jValue).map(value => (f, value))
-        case (f: String, value)          => Some(f, toAnyRef(value))
-      }.toMap)
+      val valueMap = fields
+        .flatMap {
+          case (f: String, jValue: JValue) => valueOf(jValue).map(value => (f, value))
+          case (f: String, value)          => Some(f, toAnyRef(value))
+        }
+        .toMap
+
+      JObject(new JSONObject(JavaConversions.mapAsJavaMap(valueMap)))
     }
 
-    def empty = JObject(Map.empty)
+    def empty = JObject(new JSONObject())
   }
 
   object arr {
     def apply(elems: Any*): JArray = from(elems)
 
     def from(iterable: Iterable[_]): JArray = {
-      JArray(iterable.flatMap {
-        case jValue: JValue => valueOf(jValue)
-        case value          => Some(toAnyRef(value))
-      }.toSeq)
+      val arr = new json.JSONArray()
+      iterable
+        .flatMap {
+          case jValue: JValue => valueOf(jValue)
+          case value          => Some(toAnyRef(value))
+        }
+        .foreach(arr.add)
+
+      JArray(arr)
     }
 
-    def empty = JArray(Nil)
+    def empty = JArray(new json.JSONArray())
   }
 
 
@@ -86,6 +96,16 @@ package object zeison {
     }
 
     def asJValue: JValue = this
+
+    def isDefined: Boolean = this match {
+      case JUndefined => false
+      case _          => true
+    }
+
+    def isNull: Boolean = this match {
+      case JNull => true
+      case _     => false
+    }
 
     def isBool: Boolean = this match {
       case JBoolean(_) => true
@@ -154,12 +174,18 @@ package object zeison {
         case _              => throw new ZeisonException(s"$this can't be cast to map")
       }
     }
+
+    def toOption: Option[JValue] = this match {
+      case JUndefined => None
+      case JNull      => None
+      case jValue     => Some(jValue)
+    }
   }
 
   implicit class TraversableJValue(jValue: JValue) extends Traversable[JValue] {
     override def foreach[U](f: (JValue) => U): Unit = {
       jValue match {
-        case JArray(value) => value.map(toJValue).foreach(f)
+        case JArray(value) => JavaConversions.asScalaBuffer(value).map(toJValue).foreach(f)
         case _             =>
       }
     }
@@ -177,29 +203,42 @@ package object zeison {
 
   case class JDouble(value: Double) extends JValue
 
-  case class JObject(value: Map[String, AnyRef]) extends JValue
-
-  case class JArray(value: Seq[AnyRef]) extends JValue
-
-
-  class ZeisonException(msg: String) extends RuntimeException(msg)
-
-
-  private def traverseObject(obj: Map[String, AnyRef], field: String): JValue = {
-    obj.get(field).map(toJValue).getOrElse(JUndefined)
+  case class JObject(value: JSONObject) extends JValue {
+    override def equals(o: Any) = o match {
+      case JObject(otherVal) => value.toString == otherVal.toString  // TODO: more efficient way
+      case _                 => false
+    }
   }
 
-  private def traverseArray(arr: Seq[AnyRef], index: Int): JValue = {
-    val len = arr.size
+  case class JArray(value: JSONArray) extends JValue {
+    override def equals(o: Any) = o match {
+      case JArray(otherVal) => value.toString == otherVal.toString   // TODO: more efficient way
+      case _                => false
+    }
+  }
+
+
+  class ZeisonException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
+
+
+  private def traverseObject(obj: JSONObject, field: String): JValue = {
+    if (obj.containsKey(field)) {
+      toJValue(obj.get(field))
+    } else {
+      JUndefined
+    }
+  }
+
+  private def traverseArray(arr: JSONArray, index: Int): JValue = {
+    val len = arr.size()
     if (index >= 0 && index < len) {
-      toJValue(arr(index))
+      toJValue(arr.get(index))
     } else {
       JUndefined
     }
   }
 
   private def toJValue(anyValue: Any): JValue = {
-    import scala.collection.JavaConversions._
     anyValue match {
       case null              => JNull
       case value: Boolean    => JBoolean(value)
@@ -210,8 +249,8 @@ package object zeison {
       case value: BigDecimal => JDouble(value.doubleValue())
       case value: Char       => JString(value.toString)
       case value: String     => JString(value)
-      case value: JSONObject => JObject(mapAsScalaMap(value))
-      case value: JSONArray  => JArray(asScalaBuffer(value))
+      case value: JSONObject => JObject(value)
+      case value: JSONArray  => JArray(value)
       case value             => throw new ZeisonException(s"Can't parse value ($value) to JValue")
     }
   }
@@ -233,7 +272,6 @@ package object zeison {
   }
 
   private def valueOf(jValue: JValue): Option[AnyRef] = {
-    import scala.collection.JavaConversions._
     jValue match {
       case JUndefined      => None
       case JNull           => Some(null)
@@ -241,8 +279,8 @@ package object zeison {
       case JInt(value)     => Some(new java.lang.Long(value))
       case JDouble(value)  => Some(new java.lang.Double(value))
       case JString(value)  => Some(value)
-      case JObject(value)  => Some(mapAsJavaMap(value))
-      case JArray(value)   => Some(seqAsJavaList(value))
+      case JObject(value)  => Some(value)
+      case JArray(value)   => Some(value)
     }
   }
 }
