@@ -24,7 +24,7 @@ To use zeison, add `import org.tsers.zeison._` to your imports
 val json = parse("""{ "hello": "zeison!" }""")
 ```
 
-### Navigating
+### Navigation
 
 ```scala
 val json = parse("""
