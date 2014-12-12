@@ -2,11 +2,12 @@ import SonatypeKeys._
 
 sonatypeSettings
 
-name         := "Zeison"
-version      := "0.1.0"
-organization := "org.tsers.zeison"
-profileName  := "org.tsers"
-scalaVersion := "2.10.4"
+name                := "Zeison"
+version             := "0.1.0"
+profileName         := "org.tsers"
+organization        := "org.tsers.zeison"
+scalaVersion        := "2.10.4"
+crossScalaVersions  := Seq("2.10.4", "2.11.4")
 
 libraryDependencies += "net.minidev" % "json-smart" % "1.3.1"
 
