@@ -3,7 +3,7 @@ import SonatypeKeys._
 sonatypeSettings
 
 name                := "Zeison"
-version             := "0.1.0"
+version             := "0.2.0"
 profileName         := "org.tsers"
 organization        := "org.tsers.zeison"
 scalaVersion        := "2.10.4"
