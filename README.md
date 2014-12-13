@@ -1,19 +1,38 @@
 # Zeison
 
-Small, easy and fast JSON library for Scala.
+Small, fast and easy-to-use JSON library for Scala.
 
 ## Motivation
 
-JSON is a simple format - most Scala JSON "frameworks" are not. There are tons of
-transient dependencies, DSLs and implicit conversions. This library tries to simplify
-the JSON parsing in Scala so that it feels almost like coding JavaScript. 
+Oh why? Why must the JSON parsing to be so challenging in Scala? First you must
+download tons of dependencies, then remember to use right package imports (for
+implicit conversions) and/or implicit formats. C'moon! JSON has **six** valid
+data types (+ null). It's not a rocket science.
 
-No hidden dependencies! Only [json-smart](https://code.google.com/p/json-smart/).
+Zeison tries to simplify the JSON parsing, management and rendering so that
+you don't need to know any implicit values or conversions. Under the hood, it 
+uses [json-smart](https://code.google.com/p/json-smart/) for parsing and rendering
+so it is **fast** too.
+
+Zeison is extremely lightweight - it and it's transient dependencies (well.. just 
+json-smart) require under 150KB of space.
 
 
 ## Usage
 
-To use zeison, add `import org.tsers.zeison.Zeison._` to your imports
+To use Zeison in you project, add the following line to your `build.sbt`
+
+    libraryDependencies += "org.tsers.zeison" %% "zeison" % "0.2.0"
+
+All methods and types are inside object `org.tsers.zeison.Zeison` so in order to
+use them in your code, you must add the following import
+
+    import org.tsers.zeison.Zeison._
+
+## API
+
+Zeison API is designed to be extremely simple so that all it's features can be
+demonstrated under one hundred LOC.
 
 ### Parsing
 
