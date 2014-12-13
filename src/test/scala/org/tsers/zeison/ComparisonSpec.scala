@@ -2,6 +2,7 @@ package org.tsers.zeison
 
 
 class ComparisonSpec extends BaseSpec {
+  import Zeison._
 
   describe("JValue comparison") {
     it("is possible by using equality operators") {

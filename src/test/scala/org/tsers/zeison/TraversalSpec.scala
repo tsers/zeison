@@ -1,6 +1,7 @@
 package org.tsers.zeison
 
 class TraversalSpec extends BaseSpec {
+  import Zeison._
 
   describe("JSON object traversing") {
     it("is possible with Scala's dot operator") {

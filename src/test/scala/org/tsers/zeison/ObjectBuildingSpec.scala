@@ -1,6 +1,7 @@
 package org.tsers.zeison
 
 class ObjectBuildingSpec extends BaseSpec {
+  import Zeison._
 
   describe("JSON object building") {
     it("supports JSON basic types") {

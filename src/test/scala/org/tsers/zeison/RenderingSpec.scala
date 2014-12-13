@@ -1,6 +1,7 @@
 package org.tsers.zeison
 
 class RenderingSpec extends BaseSpec {
+  import Zeison._
 
   describe("JSON rendering") {
     it("renders strings in a compact form") {

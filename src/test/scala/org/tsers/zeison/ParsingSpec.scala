@@ -3,6 +3,7 @@ package org.tsers.zeison
 import java.io.{ByteArrayInputStream, StringReader}
 
 class ParsingSpec extends BaseSpec {
+  import Zeison._
 
   describe("JSON parsing") {
     describe("type support") {

@@ -1,6 +1,7 @@
 package org.tsers.zeison
 
 class ConversionsSpec extends BaseSpec {
+  import Zeison._
 
   val json = parse(
     """

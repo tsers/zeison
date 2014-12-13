@@ -1,4 +1,4 @@
-package org.tsers
+package org.tsers.zeison
 
 import java.io.InputStream
 
@@ -9,7 +9,7 @@ import scala.collection.{JavaConversions, Map}
 import scala.util.{Failure, Success, Try}
 
 
-package object zeison {
+object Zeison {
   import scala.language.dynamics
 
   def parse(input: String): JValue = {

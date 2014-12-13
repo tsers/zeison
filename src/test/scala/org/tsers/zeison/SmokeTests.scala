@@ -5,6 +5,7 @@ import org.scalatest.FunSuite
 import scala.util.Try
 
 class SmokeTests extends FunSuite {
+  import Zeison._
 
   test("smoke tests") {
 
