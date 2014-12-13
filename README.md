@@ -13,7 +13,7 @@ No hidden dependencies! Only [json-smart](https://code.google.com/p/json-smart/)
 
 ## Usage
 
-To use zeison, add `import org.tsers.zeison._` to your imports
+To use zeison, add `import org.tsers.zeison.Zeison._` to your imports
 
 ### Parsing
 
