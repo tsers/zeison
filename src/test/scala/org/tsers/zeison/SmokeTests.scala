@@ -1,5 +1,8 @@
 package org.tsers.zeison
 
+import java.text.SimpleDateFormat
+import java.util.{TimeZone, Date}
+
 import org.scalatest.FunSuite
 
 import scala.util.Try
@@ -70,6 +73,24 @@ class SmokeTests extends FunSuite {
     val config = Map("version" -> 2)
     assert(render(obj.from(config)) == """{"version":2}""")
 
+    // custom types building and rendering
+    val now = new Date()
+    val customJson = obj("createdAt" -> JDate(now))
+    assert(render(customJson) == s"""{"createdAt":"${toISO8601(now)}"}""")
+
+    // custom types type checking and extraction
+    assert(customJson.createdAt.is[Date])
+    assert(customJson.createdAt.to[Date] == now)
+    assert(!customJson.createdAt.isInt)
+    assert(Try(customJson.createdAt.toInt).isFailure)
+  }
+
+  def toISO8601(date: Date) = {
+    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz") { setTimeZone(TimeZone.getTimeZone("UTC")) }
+    sdf.format(date).replaceAll("UTC$", "+00:00")
+  }
+  case class JDate(value: Date) extends JCustom {
+    override def valueAsJson: String = "\"" + toISO8601(value) + "\""
   }
 
 }

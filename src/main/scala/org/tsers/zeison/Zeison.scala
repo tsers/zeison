@@ -3,7 +3,7 @@ package org.tsers.zeison
 import java.io.InputStream
 
 import net.minidev.json
-import net.minidev.json.{JSONArray, JSONObject, JSONValue}
+import net.minidev.json.{JSONAware, JSONArray, JSONObject, JSONValue}
 
 import scala.collection.{JavaConversions, Map}
 import scala.util.{Failure, Success, Try}
@@ -180,6 +180,29 @@ object Zeison {
       case JNull      => None
       case jValue     => Some(jValue)
     }
+
+    def is[CustomType <: AnyRef: Manifest]: Boolean = this match {
+      case custom: JCustom => custom.is(manifest.runtimeClass)
+      case _               => false
+    }
+
+    def to[CustomType <: AnyRef: Manifest]: CustomType = {
+      def extractSafely(custom: JCustom) = {
+        if (custom.is[CustomType]) {
+          Try(custom.value.asInstanceOf[CustomType]) match {
+            case Success(value) => value
+            case Failure(cause) => throw new ZeisonException(s"Custom type '${manifest.runtimeClass}' can't be extracted", cause)
+          }
+        } else {
+          throw new ZeisonException(s"$this can't be cast to '${manifest.runtimeClass}'")
+        }
+      }
+
+      this match {
+        case c: JCustom => extractSafely(c)
+        case _          => throw new ZeisonException(s"$this can't be cast to '${manifest.runtimeClass}'")
+      }
+    }
   }
 
   implicit class TraversableJValue(jValue: JValue) extends Traversable[JValue] {
@@ -217,6 +240,16 @@ object Zeison {
     }
   }
 
+  abstract class JCustom extends JValue with JSONAware {
+    def value: AnyRef
+    def valueAsJson: String
+
+    def is(testedType: Class[_]): Boolean =
+      testedType.isAssignableFrom(value.getClass)
+
+    protected def toJSONString: String = valueAsJson
+  }
+
 
   class ZeisonException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 
@@ -251,6 +284,7 @@ object Zeison {
       case value: String     => JString(value)
       case value: JSONObject => JObject(value)
       case value: JSONArray  => JArray(value)
+      case value: JCustom    => value
       case value             => throw new ZeisonException(s"Can't parse value ($value) to JValue")
     }
   }
@@ -281,6 +315,7 @@ object Zeison {
       case JString(value)  => Some(value)
       case JObject(value)  => Some(value)
       case JArray(value)   => Some(value)
+      case custom: JCustom => Some(custom)
     }
   }
 }

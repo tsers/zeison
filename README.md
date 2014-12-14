@@ -6,8 +6,8 @@ Small, fast and easy-to-use JSON library for Scala.
 
 Oh why? Why must JSON parsing be so challenging in Scala? First you must
 download tons of dependencies, then remember to use right package imports (for
-implicit conversions) and/or implicit formats. C'moon! JSON has **six** valid
-data types (+ null). It's not rocket science.
+implicit conversions) and/or implicit formats. C'mon! JSON has only **six** 
+valid data types (+ null). It's not rocket science.
 
 Zeison tries to simplify the JSON parsing, management and rendering so that
 you don't need to know any implicit values or conversions. Under the hood, it 
@@ -112,3 +112,38 @@ assert(render(arr.from(primes)) == "[1,2,3,5]")
 val config = Map("version" -> 2)
 assert(render(obj.from(config)) == """{"version":2}""")
 ```
+
+### Custom types
+
+Some libraries (for example Casbah) enable non-standard JSON types. To support 
+these libraries, Zeison provides a way to define simple custom data types that 
+can be built, extracted and rendered from JSON objects. 
+
+```scala
+object CustomTypeExample extends App {
+  import org.tsers.zeison.Zeison._
+
+  def toISO8601(date: Date) = {
+    val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz") { setTimeZone(TimeZone.getTimeZone("UTC")) }
+    sdf.format(date).replaceAll("UTC$", "+00:00")
+  }
+
+  // In order to extend JCustom type, you must override the following methods:
+  //    def value: AnyRef
+  //    def valueAsJson: String
+  case class JDate(value: Date) extends JCustom {
+    override def valueAsJson: String = "\"" + toISO8601(value) + "\""
+  }
+
+  // building and rendering
+  val now  = new Date()
+  val json = obj("createdAt" -> JDate(now))
+  assert(render(json) == s"""{"createdAt":"${toISO8601(now)}"}""")
+
+  // type checking and extraction
+  assert(json.createdAt.is[Date])
+  assert(json.createdAt.to[Date] == now)
+  assert(!json.createdAt.isInt)
+  assert(Try(json.createdAt.toInt).isFailure)
+}
+``` 
