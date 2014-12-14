@@ -4,17 +4,17 @@ Small, fast and easy-to-use JSON library for Scala.
 
 ## Motivation
 
-Oh why? Why must the JSON parsing to be so challenging in Scala? First you must
+Oh why? Why must JSON parsing be so challenging in Scala? First you must
 download tons of dependencies, then remember to use right package imports (for
 implicit conversions) and/or implicit formats. C'moon! JSON has **six** valid
-data types (+ null). It's not a rocket science.
+data types (+ null). It's not rocket science.
 
 Zeison tries to simplify the JSON parsing, management and rendering so that
 you don't need to know any implicit values or conversions. Under the hood, it 
 uses [json-smart](https://code.google.com/p/json-smart/) for parsing and rendering
 so it is **fast** too.
 
-Zeison is extremely lightweight - it and it's transient dependencies (well.. just 
+Zeison is extremely lightweight - it and its transient dependencies (well.. just 
 json-smart) require under 150KB of space.
 
 
