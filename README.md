@@ -14,8 +14,8 @@ you don't need to know any implicit values or conversions. Under the hood, it
 uses [json-smart](https://code.google.com/p/json-smart/) for parsing and rendering
 so it is **fast** too.
 
-Zeison is extremely lightweight - it and its transient dependencies (well.. just 
-json-smart) require under 150KB of space.
+Zeison is extremely lightweight - binaries (including json-smart) require under 
+150KB of space.
 
 
 ## Usage
@@ -37,55 +37,62 @@ demonstrated under one hundred LOC.
 ### Parsing
 
 ```scala
-// parse: (String) => JValue
-// parse: (java.io.Reader) => JValue
-// parse: (InputStream) => JValue
-val json = parse("""{ "hello": "zeison!" }""")
+object ParsingExample extends App {
+  import org.tsers.zeison.Zeison._
+  // parse: (String) => JValue
+  // parse: (java.io.Reader) => JValue
+  // parse: (InputStream) => JValue
+  val json = parse("""{ "hello": "zeison!" }""")
+}
 ```
 
 ### Navigation
 
 ```scala
-val json = parse("""
-    | {
-    |   "messages": ["tsers", {"msg": "tsers!"}],
-    |   "meta": {
-    |     "numKeys": 2,
-    |     "active": true,
-    |     "score": 0.6
-    |   },
-    |   "response": null
-    | }""".stripMargin)
+object NavigationExample extends App {
+  import org.tsers.zeison.Zeison._
 
-// conversions
-assert(json.meta.numKeys.toInt == 2)
-assert(json.meta.active.toBool == true)
-assert(json.meta.score.toDouble == 0.6)
-assert(json.meta.toMap.get("numKeys").map(_.toInt) == Some(2))
-assert(json.messages.toSeq.head.toStr == "tsers")
-
-// type checking
-assert(json.meta.numKeys.isInt == true) // also .isStr .isBool .isDouble .isArray .isObject .isNull .isDefined
-
-// traversing
-assert(json("meta")("numKeys").toInt == 2)
-assert(json.messages(0).toStr == "tsers")
-assert(json.messages(1).msg.toStr == "tsers!")
-assert(json.messages.filter(_.isObject).map(_.msg.toStr).toSeq == Seq("tsers!"))
-
-// undefined values
-assert(json.meta.numKeys.isDefined == true)
-assert(json.non_existing.isDefined == false)
-assert(json.messages(-1).isDefined == false)
-assert(json.messages(10).isDefined == false)
-assert(json.meta.numKeys.toOption.map(_.toInt) == Some(2))
-assert(json.non_existing.toOption == None)
-assert(json.response.toOption == None)
-
-// exceptions
-assert(Try(json.messages.toInt).isSuccess == false)         // bad type cast
-assert(Try(json.non_existing.toInt).isSuccess == false)     // undefined has no value
-assert(Try(json.non_existing.sub_field).isSuccess == false) // undefined has no member x
+  val json = parse("""
+      | {
+      |   "messages": ["tsers", {"msg": "tsers!"}],
+      |   "meta": {
+      |     "numKeys": 2,
+      |     "active": true,
+      |     "score": 0.6
+      |   },
+      |   "response": null
+      | }""".stripMargin)
+  
+  // conversions
+  assert(json.meta.numKeys.toInt == 2)
+  assert(json.meta.active.toBool == true)
+  assert(json.meta.score.toDouble == 0.6)
+  assert(json.meta.toMap.get("numKeys").map(_.toInt) == Some(2))
+  assert(json.messages.toSeq.head.toStr == "tsers")
+  
+  // type checking
+  assert(json.meta.numKeys.isInt == true) // also .isStr .isBool .isDouble .isArray .isObject .isNull .isDefined
+  
+  // traversing
+  assert(json("meta")("numKeys").toInt == 2)
+  assert(json.messages(0).toStr == "tsers")
+  assert(json.messages(1).msg.toStr == "tsers!")
+  assert(json.messages.filter(_.isObject).map(_.msg.toStr).toSeq == Seq("tsers!"))
+  
+  // undefined values
+  assert(json.meta.numKeys.isDefined == true)
+  assert(json.non_existing.isDefined == false)
+  assert(json.messages(-1).isDefined == false)
+  assert(json.messages(10).isDefined == false)
+  assert(json.meta.numKeys.toOption.map(_.toInt) == Some(2))
+  assert(json.non_existing.toOption == None)
+  assert(json.response.toOption == None)
+  
+  // exceptions
+  assert(Try(json.messages.toInt).isSuccess == false)         // bad type cast
+  assert(Try(json.non_existing.toInt).isSuccess == false)     // undefined has no value
+  assert(Try(json.non_existing.sub_field).isSuccess == false) // undefined has no member x
+}
 ```
 
 ### Manipulation and rendering
@@ -94,23 +101,27 @@ assert(Try(json.non_existing.sub_field).isSuccess == false) // undefined has no 
 the object building/rendering is done)
 
 ```scala
-val src = parse("""
-    | {
-    |   "meta": {
-    |     "numKeys": 2
-    |   },
-    |   "response": null
-    | }""".stripMargin)
-
-// building objects with obj/arr
-assert(render(obj("msg" -> "tsers!", "meta" -> src.meta)) == """{"msg":"tsers!","meta":{"numKeys":2}}""")
-assert(render(arr(1, obj("msg" -> "tsers!"))) == """[1,{"msg":"tsers!"}]""")
-
-// building objects from Scala collections
-val primes = Seq(1,2,3,5)
-assert(render(arr.from(primes)) == "[1,2,3,5]")
-val config = Map("version" -> 2)
-assert(render(obj.from(config)) == """{"version":2}""")
+object RenderingExample extends App {
+  import org.tsers.zeison.Zeison._
+  
+  val src = parse("""
+      | {
+      |   "meta": {
+      |     "numKeys": 2
+      |   },
+      |   "response": null
+      | }""".stripMargin)
+  
+  // building objects with obj/arr
+  assert(render(obj("msg" -> "tsers!", "meta" -> src.meta)) == """{"msg":"tsers!","meta":{"numKeys":2}}""")
+  assert(render(arr(1, obj("msg" -> "tsers!"))) == """[1,{"msg":"tsers!"}]""")
+  
+  // building objects from Scala collections
+  val primes = Seq(1,2,3,5)
+  assert(render(arr.from(primes)) == "[1,2,3,5]")
+  val config = Map("version" -> 2)
+  assert(render(obj.from(config)) == """{"version":2}""")
+}
 ```
 
 ### Custom types
