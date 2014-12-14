@@ -77,7 +77,24 @@ object Zeison {
   }
 
 
-  sealed abstract class JValue extends Dynamic {
+  sealed abstract class JValue extends Dynamic with Traversable[JValue] {
+    override def foreach[U](f: (JValue) => U): Unit = this match {
+      case JArray(values) => JavaConversions.asScalaBuffer(values).map(toJValue).foreach(f)
+      case _              => throw new ZeisonException(s"$this can't be cast to iterable")
+    }
+
+    // ATTENTION: this must be overridden because otherwise traversable trait
+    // will cause StackOverflowError
+    override def toString() = {
+      def className = getClass.getSimpleName
+      this match {
+        case JNull      => "JNull"
+        case JUndefined => "JUndefined"
+        case c: JCustom => s"JCustom(${c.value})"
+        case jValue     => className + "(" + valueOf(jValue).getOrElse("<invalid>") + ")"
+      }
+    }
+
     def applyDynamic(field: String)(key: Any): JValue = {
       selectDynamic(field).apply(key)
     }
@@ -94,8 +111,6 @@ object Zeison {
       case JObject(value) => traverseObject(value, field)
       case _              => JUndefined
     }
-
-    def asJValue: JValue = this
 
     def isDefined: Boolean = this match {
       case JUndefined => false
@@ -154,14 +169,6 @@ object Zeison {
       case _         => false
     }
 
-    def toSeq: Seq[JValue] = {
-      import scala.collection.JavaConversions._
-      this match {
-        case JArray(value) => asScalaBuffer(value).map(toJValue)
-        case _             => throw new ZeisonException(s"$this can't be cast to seq")
-      }
-    }
-
     def isObject: Boolean = this match {
       case JObject(_) => true
       case _          => false
@@ -201,15 +208,6 @@ object Zeison {
       this match {
         case c: JCustom => extractSafely(c)
         case _          => throw new ZeisonException(s"$this can't be cast to '${manifest.runtimeClass}'")
-      }
-    }
-  }
-
-  implicit class TraversableJValue(jValue: JValue) extends Traversable[JValue] {
-    override def foreach[U](f: (JValue) => U): Unit = {
-      jValue match {
-        case JArray(value) => JavaConversions.asScalaBuffer(value).map(toJValue).foreach(f)
-        case _             =>
       }
     }
   }
@@ -273,19 +271,24 @@ object Zeison {
 
   private def toJValue(anyValue: Any): JValue = {
     anyValue match {
-      case null              => JNull
-      case value: Boolean    => JBoolean(value)
-      case value: Int        => JInt(value)
-      case value: Long       => JInt(value)
-      case value: Float      => JDouble(value)
-      case value: Double     => JDouble(value)
-      case value: BigDecimal => JDouble(value.doubleValue())
-      case value: Char       => JString(value.toString)
-      case value: String     => JString(value)
-      case value: JSONObject => JObject(value)
-      case value: JSONArray  => JArray(value)
-      case value: JCustom    => value
-      case value             => throw new ZeisonException(s"Can't parse value ($value) to JValue")
+      case null                    => JNull
+      case value: Boolean          => JBoolean(value)
+      case value: Byte             => JInt(value)
+      case value: Short            => JInt(value)
+      case value: Int              => JInt(value)
+      case value: Long             => JInt(value)
+      case value: Float            => JDouble(value)
+      case value: Double           => JDouble(value)
+      case value: BigDecimal       => JDouble(value.doubleValue())
+      case value: java.lang.Float  => JDouble(value.toDouble)
+      case value: java.lang.Double => JDouble(value)
+      case value: Number           => JInt(value.longValue())
+      case value: Char             => JString(value.toString)
+      case value: String           => JString(value)
+      case value: JSONObject       => JObject(value)
+      case value: JSONArray        => JArray(value)
+      case value: JCustom          => value
+      case value                   => throw new ZeisonException(s"Can't parse value ($value) to JValue")
     }
   }
 
