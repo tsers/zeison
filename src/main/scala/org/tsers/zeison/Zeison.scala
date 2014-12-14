@@ -13,21 +13,21 @@ object Zeison {
   import scala.language.dynamics
 
   def parse(input: String): JValue = {
-    Try(toJValue(JSONValue.parseWithException(input))) match {
+    Try(toJValue(JSONValue.parseStrict(input))) match {
       case Success(json) => json
       case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: ${e.getMessage}", e)
     }
   }
 
   def parse(in: InputStream): JValue = {
-    Try(toJValue(JSONValue.parseWithException(in))) match {
+    Try(toJValue(JSONValue.parseStrict(in))) match {
       case Success(json) => json
       case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: $e")
     }
   }
 
   def parse(reader: java.io.Reader): JValue = {
-    Try(toJValue(JSONValue.parseWithException(reader))) match {
+    Try(toJValue(JSONValue.parseStrict(reader))) match {
       case Success(json) => json
       case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: $e")
     }

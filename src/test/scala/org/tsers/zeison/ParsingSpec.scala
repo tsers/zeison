@@ -54,6 +54,11 @@ class ParsingSpec extends BaseSpec {
           parse("{\"invalid\": }")
         }
       }
+      it("throws an exception if root element is not a valid JSON type") {
+        intercept[ZeisonException] {
+          parse("invalid")  // NOTE: no quotation marks -> invalid element
+        }
+      }
     }
   }
 }
