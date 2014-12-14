@@ -79,8 +79,10 @@ object Zeison {
 
   sealed abstract class JValue extends Dynamic with Traversable[JValue] {
     override def foreach[U](f: (JValue) => U): Unit = this match {
+      case JUndefined     =>
+      case JNull          =>
       case JArray(values) => JavaConversions.asScalaBuffer(values).map(toJValue).foreach(f)
-      case _              => throw new ZeisonException(s"$this can't be cast to iterable")
+      case jValue         => f(jValue)
     }
 
     // ATTENTION: this must be overridden because otherwise traversable trait

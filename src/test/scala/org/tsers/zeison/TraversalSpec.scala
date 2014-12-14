@@ -68,6 +68,18 @@ class TraversalSpec extends BaseSpec {
         .toSeq
       pow2 should equal(Seq(2*2, 4*4))
     }
+
+    it("can iterate any data type") {
+      val json = parse("""{"num": 1, "str": "tsers"}""")
+      json.num.map(_.toInt).toSeq should equal(Seq(1))
+      json.str.map(_.toStr).toSeq should equal(Seq("tsers"))
+    }
+
+    it("returns empty iterable if trying to iterate null or undefined") {
+      val json = parse("""{"nullable": null}""")
+      json.nullable.map(_.toInt) should be('empty)
+      json.non_existing.map(_.toInt) should be('empty)
+    }
   }
 
 }
