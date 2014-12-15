@@ -30,9 +30,9 @@ class ConversionsSpec extends BaseSpec {
     it("supports doubles") {
       json.dbl should be('double)
       json.dbl.toDouble should equal(123.3)
-      json.int should not be 'double
+      json.bool should not be 'double
       intercept[ZeisonException] {
-        json.int.toDouble
+        json.int.toBool
       }
     }
 
