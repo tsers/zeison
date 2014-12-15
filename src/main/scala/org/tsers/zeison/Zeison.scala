@@ -51,7 +51,7 @@ object Zeison {
   }
 
 
-  def render(json: JValue): String = ???
+  def render(json: JValue): String = Rendering.render(json)
 
 
   sealed abstract class JValue extends Dynamic with Traversable[JValue] {
