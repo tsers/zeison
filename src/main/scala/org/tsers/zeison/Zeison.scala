@@ -308,27 +308,25 @@ object Zeison {
     }
 
     def toJValue(anyValue: Any): JValue = {
-      type LMap   = immutable.ListMap[Any, Any]
-      type ObjMap = scala.collection.Map[Any, Any]
-      type ObjArr = scala.collection.TraversableOnce[Any]
-      anyValue match {
-        case null                    => JNull
-        case value: JValue           => value
-        case valueOpt: Option[_]     => valueOpt.map(toJValue).getOrElse(JUndefined)
-        case value: Boolean          => JBoolean(value)
-        case value: Float            => JDouble(value)
-        case value: Double           => JDouble(value)
-        case value: BigDecimal       => JDouble(value.toDouble)
-        case value: java.lang.Float  => JDouble(Float.unbox(value))
-        case value: java.lang.Double => JDouble(Double.unbox(value))
-        case value: Number           => JInt(value.longValue())
-        case value: Char             => JString(value.toString)
-        case value: String           => JString(value)
-        case fields: LMap            => JObject(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) })
-        case fields: ObjMap          => JObject(immutable.ListMap(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) }.toList: _*))
-        case elems: ObjArr           => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
-        case elems: Array[_]         => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
-        case value                   => throw new ZeisonException(s"Can't parse value ($value) to JValue")
+      import scala.{collection => col}
+      (anyValue: @unchecked) match {
+        case null                          => JNull
+        case value: JValue                 => value
+        case valueOpt: Option[_]           => valueOpt.map(toJValue).getOrElse(JUndefined)
+        case value: Boolean                => JBoolean(value)
+        case value: Float                  => JDouble(value)
+        case value: Double                 => JDouble(value)
+        case value: BigDecimal             => JDouble(value.toDouble)
+        case value: java.lang.Float        => JDouble(Float.unbox(value))
+        case value: java.lang.Double       => JDouble(Double.unbox(value))
+        case value: Number                 => JInt(value.longValue())
+        case value: Char                   => JString(value.toString)
+        case value: String                 => JString(value)
+        case f: immutable.ListMap[_,_]     => JObject(f.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) })
+        case f: scala.collection.Map[_,_]  => JObject(immutable.ListMap(f.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) }.toList: _*))
+        case elems: col.TraversableOnce[_] => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
+        case elems: Array[_]               => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
+        case value                         => throw new ZeisonException(s"Can't parse value ($value) to JValue")
       }
     }
 
