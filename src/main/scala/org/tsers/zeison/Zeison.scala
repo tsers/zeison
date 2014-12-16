@@ -307,8 +307,8 @@ object Zeison {
     }
 
     def toJValue(anyValue: Any): JValue = {
-      type LMap   = immutable.ListMap[String, Any]
-      type ObjMap = scala.collection.Map[String, Any]
+      type LMap   = immutable.ListMap[Any, Any]
+      type ObjMap = scala.collection.Map[Any, Any]
       type ObjArr = scala.collection.TraversableOnce[Any]
       anyValue match {
         case null                    => JNull
@@ -323,8 +323,8 @@ object Zeison {
         case value: Number           => JInt(value.longValue())
         case value: Char             => JString(value.toString)
         case value: String           => JString(value)
-        case fields: LMap            => JObject(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k, _)) })
-        case fields: ObjMap          => JObject(immutable.ListMap(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k, _)) }.toList: _*))
+        case fields: LMap            => JObject(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) })
+        case fields: ObjMap          => JObject(immutable.ListMap(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) }.toList: _*))
         case elems: ObjArr           => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
         case elems: Array[_]         => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
         case value                   => throw new ZeisonException(s"Can't parse value ($value) to JValue")
