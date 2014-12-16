@@ -26,7 +26,13 @@ To use Zeison in you project, add the following line to your `build.sbt`
 All methods and types are inside object `org.tsers.zeison.Zeison` so in order to
 use them in your code, you must add the following import
 
-    import org.tsers.zeison.Zeison._
+```scala
+// if you want to use methdods with explicit "json." prefix
+import org.tsers.zeison.{Zeison => json}
+// or if you want to use methods without "json." prefix
+import org.tsers.zeison.Zeison._
+```
+
 
 ## API
 
@@ -37,11 +43,11 @@ demonstrated under one hundred LOC.
 
 ```scala
 object ParsingExample extends App {
-  import org.tsers.zeison.Zeison._
+  import org.tsers.zeison.{Zeison => json}
   // parse: (String) => JValue
   // parse: (java.io.Reader) => JValue
   // parse: (InputStream) => JValue
-  val json = parse("""{ "hello": "zeison!" }""")
+  val data = json.parse("""{ "hello": "zeison!" }""")
 }
 ```
 
@@ -49,9 +55,9 @@ object ParsingExample extends App {
 
 ```scala
 object NavigationExample extends App {
-  import org.tsers.zeison.Zeison._
+  import org.tsers.zeison.{Zeison => json}
 
-  val json = parse("""
+  val data = json.parse("""
       | {
       |   "messages": ["tsers", {"msg": "tsers!"}],
       |   "meta": {
@@ -63,34 +69,34 @@ object NavigationExample extends App {
       | }""".stripMargin)
   
   // conversions
-  assert(json.meta.numKeys.toInt == 2)
-  assert(json.meta.active.toBool == true)
-  assert(json.meta.score.toDouble == 0.6)
-  assert(json.meta.toMap.get("numKeys").map(_.toInt) == Some(2))
-  assert(json.messages.toSeq.head.toStr == "tsers")
+  assert(data.meta.numKeys.toInt == 2)
+  assert(data.meta.active.toBool == true)
+  assert(data.meta.score.toDouble == 0.6)
+  assert(data.meta.toMap.get("numKeys").map(_.toInt) == Some(2))
+  assert(data.messages.toSeq.head.toStr == "tsers")
   
   // type checking
-  assert(json.meta.numKeys.isInt == true) // also .isStr .isBool .isDouble .isArray .isObject .isNull .isDefined
+  assert(data.meta.numKeys.isInt == true) // also .isStr .isBool .isDouble .isArray .isObject .isNull .isDefined
   
   // traversing
-  assert(json("meta")("numKeys").toInt == 2)
-  assert(json.messages(0).toStr == "tsers")
-  assert(json.messages(1).msg.toStr == "tsers!")
-  assert(json.messages.filter(_.isObject).map(_.msg.toStr).toSeq == Seq("tsers!"))
+  assert(data("meta")("numKeys").toInt == 2)
+  assert(data.messages(0).toStr == "tsers")
+  assert(data.messages(1).msg.toStr == "tsers!")
+  assert(data.messages.filter(_.isObject).map(_.msg.toStr).toSeq == Seq("tsers!"))
   
   // undefined values
-  assert(json.meta.numKeys.isDefined == true)
-  assert(json.non_existing.isDefined == false)
-  assert(json.messages(-1).isDefined == false)
-  assert(json.messages(10).isDefined == false)
-  assert(json.meta.numKeys.toOption.map(_.toInt) == Some(2))
-  assert(json.non_existing.toOption == None)
-  assert(json.response.toOption == None)
+  assert(data.meta.numKeys.isDefined == true)
+  assert(data.non_existing.isDefined == false)
+  assert(data.messages(-1).isDefined == false)
+  assert(data.messages(10).isDefined == false)
+  assert(data.meta.numKeys.toOption.map(_.toInt) == Some(2))
+  assert(data.non_existing.toOption == None)
+  assert(data.response.toOption == None)
   
   // exceptions
-  assert(Try(json.messages.toInt).isSuccess == false)         // bad type cast
-  assert(Try(json.non_existing.toInt).isSuccess == false)     // undefined has no value
-  assert(Try(json.non_existing.sub_field).isSuccess == false) // undefined has no member x
+  assert(Try(data.messages.toInt).isSuccess == false)         // bad type cast
+  assert(Try(data.non_existing.toInt).isSuccess == false)     // undefined has no value
+  assert(Try(data.non_existing.sub_field).isSuccess == false) // undefined has no member x
 }
 ```
 
@@ -101,9 +107,9 @@ the object building/rendering is done)
 
 ```scala
 object RenderingExample extends App {
-  import org.tsers.zeison.Zeison._
+  import org.tsers.zeison.{Zeison => json}
   
-  val src = parse("""
+  val src = json.parse("""
       | {
       |   "meta": {
       |     "numKeys": 2
@@ -111,15 +117,15 @@ object RenderingExample extends App {
       |   "response": null
       | }""".stripMargin)
   
-  // building objects with obj/arr
-  assert(render(obj("msg" -> "tsers!", "meta" -> src.meta)) == """{"msg":"tsers!","meta":{"numKeys":2}}""")
-  assert(render(arr(1, obj("msg" -> "tsers!"))) == """[1,{"msg":"tsers!"}]""")
+  // building objects with json.obj(<fields>) / json.arr(<elems>) / json.from(<any>)
+  assert(json.render(json.obj("msg" -> "tsers!", "meta" -> src.meta)) == """{"msg":"tsers!","meta":{"numKeys":2}}""")
+  assert(json.render(json.arr(1, json.obj("msg" -> "tsers!"))) == """[1,{"msg":"tsers!"}]""")
   
-  // building objects from Scala collections
+  // building objects from Scala collections (Iterable[Any] and Map[String, Any] supported)
   val primes = Seq(1,2,3,5)
-  assert(render(arr.from(primes)) == "[1,2,3,5]")
+  assert(json.render(json.from(primes)) == "[1,2,3,5]")
   val config = Map("version" -> 2)
-  assert(render(obj.from(config)) == """{"version":2}""")
+  assert(json.render(json.from(config)) == """{"version":2}""")
 }
 ```
 
@@ -131,7 +137,7 @@ can be built, extracted and rendered from JSON objects.
 
 ```scala
 object CustomTypeExample extends App {
-  import org.tsers.zeison.Zeison._
+  import org.tsers.zeison.{Zeison => json}
 
   def toISO8601(date: Date) = {
     val sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssz") { setTimeZone(TimeZone.getTimeZone("UTC")) }
@@ -141,19 +147,19 @@ object CustomTypeExample extends App {
   // In order to extend JCustom type, you must override the following methods:
   //    def value: AnyRef
   //    def valueAsJson: String
-  case class JDate(value: Date) extends JCustom {
+  case class JDate(value: Date) extends json.JCustom {
     override def valueAsJson: String = "\"" + toISO8601(value) + "\""
   }
 
   // building and rendering
   val now  = new Date()
-  val json = obj("createdAt" -> JDate(now))
-  assert(render(json) == s"""{"createdAt":"${toISO8601(now)}"}""")
+  val data = json.obj("createdAt" -> JDate(now))
+  assert(json.render(data) == s"""{"createdAt":"${toISO8601(now)}"}""")
 
   // type checking and extraction
-  assert(json.createdAt.is[Date])
-  assert(json.createdAt.to[Date] == now)
-  assert(!json.createdAt.isInt)
-  assert(Try(json.createdAt.toInt).isFailure)
+  assert(data.createdAt.is[Date])
+  assert(data.createdAt.to[Date] == now)
+  assert(!data.createdAt.isInt)
+  assert(Try(data.createdAt.toInt).isFailure)
 }
 ``` 
