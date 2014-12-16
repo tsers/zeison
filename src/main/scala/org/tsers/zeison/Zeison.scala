@@ -48,7 +48,7 @@ object Zeison {
     def from(fields: Map[String, Any]) = Zeison.from(fields)
 
     def apply(fields: (String, Any)*): JObject = {
-      from(immutable.ListMap(fields.toList: _*)).asInstanceOf[JObject]
+      Zeison.from(immutable.ListMap(fields.toList: _*)).asInstanceOf[JObject]
     }
   }
 
@@ -59,7 +59,7 @@ object Zeison {
     def from(elems: Iterable[Any]) = Zeison.from(elems)
 
     def apply(elems: Any*): JArray = {
-      from(elems.toIterable).asInstanceOf[JArray]
+      Zeison.from(elems.toIterable).asInstanceOf[JArray]
     }
   }
 
