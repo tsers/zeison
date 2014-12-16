@@ -45,7 +45,6 @@ demonstrated under one hundred LOC.
 object ParsingExample extends App {
   import org.tsers.zeison.{Zeison => json}
   // parse: (String) => JValue
-  // parse: (java.io.Reader) => JValue
   // parse: (InputStream) => JValue
   val data = json.parse("""{ "hello": "zeison!" }""")
 }
