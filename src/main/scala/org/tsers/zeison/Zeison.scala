@@ -1,35 +1,32 @@
 package org.tsers.zeison
 
 import java.io.InputStream
+import java.nio.channels.Channels
 
-import net.minidev.json
-import net.minidev.json.{JSONAware, JSONArray, JSONObject, JSONValue}
+import jawn.{FContext, Facade, Parser}
 
-import scala.collection.{JavaConversions, Map}
 import scala.util.{Failure, Success, Try}
 
 
 object Zeison {
   import scala.language.dynamics
+  import scala.collection.immutable
+  import org.tsers.zeison.Zeison.internal._
+
 
   def parse(input: String): JValue = {
-    Try(toJValue(JSONValue.parseStrict(input))) match {
+    implicit val facade = new ZeisonFacade
+    Parser.parseFromString(input) match {
       case Success(json) => json
       case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: ${e.getMessage}", e)
     }
   }
 
   def parse(in: InputStream): JValue = {
-    Try(toJValue(JSONValue.parseStrict(in))) match {
+    implicit val facade = new ZeisonFacade
+    Parser.parseFromChannel(Channels.newChannel(in)) match {
       case Success(json) => json
-      case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: $e")
-    }
-  }
-
-  def parse(reader: java.io.Reader): JValue = {
-    Try(toJValue(JSONValue.parseStrict(reader))) match {
-      case Success(json) => json
-      case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: $e")
+      case Failure(e)    => throw new ZeisonException(s"JSON parsing failed: ${e.getMessage}", e)
     }
   }
 
@@ -37,51 +34,31 @@ object Zeison {
     def apply(fields: (String, Any)*): JObject = from(fields)
 
     def from(fields: Iterable[(String, _)]): JObject = {
-      val valueMap = fields
-        .flatMap {
-          case (f: String, jValue: JValue) => valueOf(jValue).map(value => (f, value))
-          case (f: String, value)          => Some(f, toAnyRef(value))
-        }
-        .toMap
-
-      JObject(new JSONObject(JavaConversions.mapAsJavaMap(valueMap)))
+      JObject(immutable.ListMap(fields.map { case (k: String, v: Any) => (k, toJValue(v)) }.filter(_._2.isDefined).toList: _*))
     }
 
-    def empty = JObject(new JSONObject())
+    def empty = JObject(immutable.ListMap.empty)
   }
 
   object arr {
     def apply(elems: Any*): JArray = from(elems)
 
     def from(iterable: Iterable[_]): JArray = {
-      val arr = new json.JSONArray()
-      iterable
-        .flatMap {
-          case jValue: JValue => valueOf(jValue)
-          case value          => Some(toAnyRef(value))
-        }
-        .foreach(arr.add)
-
-      JArray(arr)
+      JArray(iterable.map(toJValue).filter(_.isDefined).toVector)
     }
 
-    def empty = JArray(new json.JSONArray())
+    def empty = JArray(Vector.empty)
   }
 
 
-  def render(json: JValue): String = {
-    valueOf(json) match {
-      case Some(value) => JSONValue.toJSONString(value)
-      case None        => throw new ZeisonException("Can't render undefined value")
-    }
-  }
+  def render(json: JValue): String = Rendering.render(json)
 
 
   sealed abstract class JValue extends Dynamic with Traversable[JValue] {
     override def foreach[U](f: (JValue) => U): Unit = this match {
       case JUndefined     =>
       case JNull          =>
-      case JArray(values) => JavaConversions.asScalaBuffer(values).map(toJValue).foreach(f)
+      case JArray(values) => values.foreach(f)
       case jValue         => f(jValue)
     }
 
@@ -92,7 +69,6 @@ object Zeison {
       this match {
         case JNull      => "JNull"
         case JUndefined => "JUndefined"
-        case c: JCustom => s"JCustom(${c.value})"
         case jValue     => className + "(" + valueOf(jValue).getOrElse("<invalid>") + ")"
       }
     }
@@ -102,16 +78,16 @@ object Zeison {
     }
 
     def apply(key: Any): JValue = (key, this) match {
-      case (field: String, _)           => selectDynamic(field)
-      case (index: Int, JArray(value))  => traverseArray(value, index)
-      case (index: Int, JUndefined)     => throw new ZeisonException(s"Can't get element [$index] from undefined")
-      case _                            => JUndefined
+      case (field: String, _)                                          => selectDynamic(field)
+      case (idx: Int, JArray(elems)) if idx >= 0 && elems.length > idx => elems(idx)
+      case (index: Int, JUndefined)                                    => throw new ZeisonException(s"Can't get element [$index] from undefined")
+      case _                                                           => JUndefined
     }
 
     def selectDynamic(field: String): JValue = this match {
-      case JUndefined     => throw new ZeisonException(s"Can't get field [$field] from undefined")
-      case JObject(value) => traverseObject(value, field)
-      case _              => JUndefined
+      case JUndefined      => throw new ZeisonException(s"Can't get field [$field] from undefined")
+      case JObject(fields) => fields.getOrElse(field, JUndefined)
+      case _               => JUndefined
     }
 
     def isDefined: Boolean = this match {
@@ -135,25 +111,25 @@ object Zeison {
     }
 
     def isInt: Boolean = this match {
-      case JInt(_) => true
-      case _       => false
+      case n: JNum if n._isInt => true
+      case _                   => false
     }
 
     def toLong: Long = this match {
-      case JInt(value) => value
-      case _           => throw new ZeisonException(s"$this can't be cast to number")
+      case n: JNum if n._isInt => n._toLong
+      case _                   => throw new ZeisonException(s"$this can't be cast to number")
     }
 
     def toInt: Int = this.toLong.toInt
 
     def isDouble: Boolean = this match {
-      case JDouble(_) => true
-      case _          => false
+      case n: JNum if !n._isInt => true
+      case _                    => false
     }
 
     def toDouble: Double = this match {
-      case JDouble(value) => value
-      case _              => throw new ZeisonException(s"$this can't be cast to double")
+      case n: JNum => n._toDbl
+      case _       => throw new ZeisonException(s"$this can't be cast to double")
     }
 
     def isStr: Boolean = this match {
@@ -176,12 +152,9 @@ object Zeison {
       case _          => false
     }
 
-    def toMap: Map[String, JValue] = {
-      import scala.collection.JavaConversions._
-      this match {
-        case JObject(value) => mapAsScalaMap(value).mapValues(toJValue)
-        case _              => throw new ZeisonException(s"$this can't be cast to map")
-      }
+    def toMap: Map[String, JValue] = this match {
+      case JObject(fields) => fields.toMap
+      case _               => throw new ZeisonException(s"$this can't be cast to map")
     }
 
     def toOption: Option[JValue] = this match {
@@ -220,107 +193,100 @@ object Zeison {
 
   case class JBoolean(value: Boolean) extends JValue
 
-  case class JInt(value: Long) extends JValue
+  case class JNum(value: String) extends JValue {
+    private[zeison] def _isInt = !value.exists(ch => ch == '.' || ch == 'e' || ch == 'E')
+    private[zeison] def _toLong = value.toLong
+    private[zeison] def _toDbl = value.toDouble
+  }
 
   case class JString(value: String) extends JValue
 
-  case class JDouble(value: Double) extends JValue
+  case class JObject(fields: immutable.ListMap[String, JValue]) extends JValue
 
-  case class JObject(value: JSONObject) extends JValue {
-    override def equals(o: Any) = o match {
-      case JObject(otherVal) => value.toString == otherVal.toString  // TODO: more efficient way
-      case _                 => false
-    }
-  }
+  case class JArray(elems: Vector[JValue]) extends JValue
 
-  case class JArray(value: JSONArray) extends JValue {
-    override def equals(o: Any) = o match {
-      case JArray(otherVal) => value.toString == otherVal.toString   // TODO: more efficient way
-      case _                => false
-    }
-  }
-
-  abstract class JCustom extends JValue with JSONAware {
+  abstract class JCustom extends JValue {
     def value: AnyRef
     def valueAsJson: String
-
-    def is(testedType: Class[_]): Boolean =
-      testedType.isAssignableFrom(value.getClass)
-
-    protected def toJSONString: String = valueAsJson
+    def is(testedType: Class[_]): Boolean = testedType.isAssignableFrom(value.getClass)
   }
 
 
   class ZeisonException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)
 
 
-  private def traverseObject(obj: JSONObject, field: String): JValue = {
-    if (obj.containsKey(field)) {
-      toJValue(obj.get(field))
-    } else {
-      JUndefined
-    }
-  }
+  private[zeison] object internal {
+    import scala.collection.mutable
 
-  private def traverseArray(arr: JSONArray, index: Int): JValue = {
-    val len = arr.size()
-    if (index >= 0 && index < len) {
-      toJValue(arr.get(index))
-    } else {
-      JUndefined
-    }
-  }
+    class ZeisonFacade extends Facade[JValue] {
+      def jarray(arr: mutable.ListBuffer[JValue]) = JArray(arr.toVector)
+      def jobject(obj: immutable.ListMap[String, JValue]) = JObject(obj)
+      def jnull() = JNull
+      def jfalse() = JBoolean(false)
+      def jtrue() = JBoolean(true)
+      def jnum(s: String) = JNum(s)
+      def jint(s: String) = JNum(s)
+      def jstring(s: String) = JString(s)
 
-  private def toJValue(anyValue: Any): JValue = {
-    anyValue match {
-      case null                    => JNull
-      case value: Boolean          => JBoolean(value)
-      case value: Byte             => JInt(value)
-      case value: Short            => JInt(value)
-      case value: Int              => JInt(value)
-      case value: Long             => JInt(value)
-      case value: Float            => JDouble(value)
-      case value: Double           => JDouble(value)
-      case value: BigDecimal       => JDouble(value.doubleValue())
-      case value: java.lang.Float  => JDouble(value.toDouble)
-      case value: java.lang.Double => JDouble(value)
-      case value: Number           => JInt(value.longValue())
-      case value: Char             => JString(value.toString)
-      case value: String           => JString(value)
-      case value: JSONObject       => JObject(value)
-      case value: JSONArray        => JArray(value)
-      case value: JCustom          => value
-      case value                   => throw new ZeisonException(s"Can't parse value ($value) to JValue")
-    }
-  }
+      def singleContext() = new FContext[JValue] {
+        var value: JValue = _
+        def add(s: String) { value = jstring(s) }
+        def add(v: JValue) { value = v }
+        def finish = value
+        def isObj = false
+      }
 
-  private def toAnyRef(anyValue: Any): AnyRef = {
-    anyValue match {
-      case null              => null
-      case value: Boolean    => new java.lang.Boolean(value)
-      case value: Byte       => new java.lang.Long(value)
-      case value: Short      => new java.lang.Long(value)
-      case value: Int        => new java.lang.Long(value)
-      case value: Long       => new java.lang.Long(value)
-      case value: Float      => new java.lang.Double(value)
-      case value: Double     => new java.lang.Double(value)
-      case value: Char       => value.toString
-      case value: AnyRef     => value
-      case value             => throw new ZeisonException(s"Unsupported value type (${value.getClass}): $value")
-    }
-  }
+      def arrayContext() = new FContext[JValue] {
+        val vs = mutable.ListBuffer.empty[JValue]
+        def add(s: String) { vs += jstring(s) }
+        def add(v: JValue) { vs += v }
+        def finish = jarray(vs)
+        def isObj = false
+      }
 
-  private def valueOf(jValue: JValue): Option[AnyRef] = {
-    jValue match {
-      case JUndefined      => None
-      case JNull           => Some(null)
-      case JBoolean(value) => Some(new java.lang.Boolean(value))
-      case JInt(value)     => Some(new java.lang.Long(value))
-      case JDouble(value)  => Some(new java.lang.Double(value))
-      case JString(value)  => Some(value)
-      case JObject(value)  => Some(value)
-      case JArray(value)   => Some(value)
-      case custom: JCustom => Some(custom)
+      def objectContext() = new FContext[JValue] {
+        var key: String = null
+        var vs = immutable.ListMap.empty[String, JValue]
+        def add(s: String) {
+          if (key == null) {
+            key = s
+          } else {
+            vs = vs + ((key, jstring(s)))
+            key = null
+          }
+        }
+        def add(v: JValue) {
+          vs = vs.updated(key, v)
+          key = null
+        }
+        def finish = jobject(vs)
+        def isObj = true
+      }
+    }
+
+    def toJValue(anyValue: Any): JValue = {
+      anyValue match {
+        case null                    => JNull
+        case value: JValue           => value
+        case value: Boolean          => JBoolean(value)
+        case value: Number           => JNum(value.toString)
+        case value: Char             => JString(value.toString)
+        case value: String           => JString(value)
+        case value                   => throw new ZeisonException(s"Can't parse value ($value) to JValue")
+      }
+    }
+
+    def valueOf(jValue: JValue): Option[Any] = {
+      jValue match {
+        case JUndefined      => None
+        case JNull           => Some(null)
+        case JBoolean(value) => Some(value)
+        case JNum(value)     => Some(value)
+        case JString(value)  => Some(value)
+        case JObject(value)  => Some(value)
+        case JArray(value)   => Some(value)
+        case custom: JCustom => Some(custom.value)
+      }
     }
   }
 }

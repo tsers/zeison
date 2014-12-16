@@ -3,7 +3,7 @@ import SonatypeKeys._
 sonatypeSettings
 
 name                := "Zeison"
-version             := "0.3.2"
+version             := "0.4.0-SNAPSHOT"
 profileName         := "org.tsers"
 organization        := "org.tsers.zeison"
 scalaVersion        := "2.10.4"
@@ -11,7 +11,7 @@ crossScalaVersions  := Seq("2.10.4", "2.11.4")
 
 scalacOptions += "-target:jvm-1.6"
 
-libraryDependencies += "net.minidev" % "json-smart" % "1.3.1"
+libraryDependencies += "org.spire-math" %% "jawn-parser" % "0.7.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.2" % "test"
 
