@@ -21,7 +21,7 @@ Zeison is extremely lightweight - binaries (including jawn-parser) require under
 
 To use Zeison in you project, add the following line to your `build.sbt`
 
-    libraryDependencies += "org.tsers.zeison" %% "zeison" % "0.4.0"
+    libraryDependencies += "org.tsers.zeison" %% "zeison" % "0.5.1"
 
 All methods and types are inside object `org.tsers.zeison.Zeison` so in order to
 use them in your code, you must add the following import
@@ -125,6 +125,14 @@ object RenderingExample extends App {
   assert(json.render(json.from(primes)) == "[1,2,3,5]")
   val config = Map("version" -> 2)
   assert(json.render(json.from(config)) == """{"version":2}""")
+  
+  // pretty rendering
+  assert(json.renderPretty(json.from(config)) ==
+    """
+      |{
+      |  "version": 2
+      |}
+    """.stripMargin.trim)
 }
 ```
 
