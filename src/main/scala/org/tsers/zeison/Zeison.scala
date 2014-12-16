@@ -67,8 +67,9 @@ object Zeison {
   /*
    * JSON rendering
    */
-  def render(json: JValue): String = Rendering.render(json)
+  def render(json: JValue): String = Rendering.render(json, pretty = false)
 
+  def renderPretty(json: JValue): String = Rendering.render(json, pretty = true)
 
   sealed abstract class JValue extends Dynamic with Traversable[JValue] {
     override def foreach[U](f: (JValue) => U): Unit = this match {

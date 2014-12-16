@@ -8,24 +8,25 @@ private [zeison] object Rendering {
   import scala.collection.immutable
 
   private final val Hex = "0123456789ABCDEF".intern()
+  private final val IndentWidth = 2
 
-  def render(value: JValue): String = {
+  def render(value: JValue, pretty: Boolean): String = {
     val sb = new StringBuilder
-    rrender(value, sb)
+    renderRecursive(value, sb, pretty, 0)
     sb.toString()
   }
 
-  private def rrender(value: JValue, sb: StringBuilder): Unit =  {
-    def renderStr(str: String): Unit = {
+  private def renderRecursive(value: JValue, sb: StringBuilder, pretty: Boolean, indent: Int): Unit =  {
+    def renderStr(str: String, sb: StringBuilder): Unit = {
       sb.append('"')
       str.foreach(c => (c: @switch) match {
         case '"'  => sb.append("\\\"")
         case '\\' => sb.append("\\\\")
-        case '\b' => sb.append("\\b")
-        case '\f' => sb.append("\\f")
         case '\n' => sb.append("\\n")
         case '\r' => sb.append("\\r")
         case '\t' => sb.append("\\t")
+        case '\b' => sb.append("\\b")
+        case '\f' => sb.append("\\f")
         case '/'  => sb.append("\\/")
         case ch   => {
           if ((ch >= '\u0000' && ch <= '\u001F') || (ch >= '\u007F' && ch <= '\u009F') || (ch >= '\u2000' && ch <= '\u20FF')) {
@@ -41,32 +42,79 @@ private [zeison] object Rendering {
       })
       sb.append('"')
     }
-    @inline def renderField(field: (String, JValue)): Unit = {
-      renderStr(field._1)
-      sb.append(':')
-      rrender(field._2, sb)
-    }
-    @inline def renderObject(fields: immutable.ListMap[String, JValue]): Unit = {
+
+    @inline def compactObject(fields: immutable.ListMap[String, JValue]): Unit = {
       sb.append('{')
       var isFirst = true
       fields.foreach { f =>
-        if (f._2.isDefined) {
+        val (key, value) = f
+        if (value.isDefined) {
           if (!isFirst) sb.append(',') else isFirst = false
-          renderField(f)
+          renderStr(key, sb)
+          sb.append(':')
+          renderRecursive(value, sb, pretty = false, 0)
         }
       }
       sb.append('}')
     }
-    @inline def renderArray(elems: Vector[JValue]): Unit = {
+
+    @inline def compactArray(elems: Vector[JValue]): Unit = {
       sb.append('[')
       var isFirst = true
       elems.foreach { e =>
         if (e.isDefined) {
           if (!isFirst) sb.append(',') else isFirst = false
-          rrender(e, sb)
+          renderRecursive(e, sb, pretty = false, 0)
         }
       }
       sb.append(']')
+    }
+
+    def prettyArray(elems: Vector[JValue]): Unit = {
+      sb.append('[')
+      if (elems.size == 1) {
+        val e = elems.head
+        if (e.isDefined) {
+          renderRecursive(elems.head, sb, pretty = true, indent)
+        }
+        sb.append(']')
+      } else {
+        val spaces = " " * (indent + IndentWidth)
+        var isFirst = true
+        elems.foreach { e =>
+          if (e.isDefined) {
+            if(!isFirst) sb.append(",\n") else { sb.append('\n'); isFirst = false }
+            sb.append(spaces)
+            renderRecursive(e, sb, pretty = true, indent + IndentWidth)
+          }
+        }
+        if (!isFirst) {
+          sb.append('\n')
+          sb.append(" " * indent)
+        }
+        sb.append(']')
+      }
+    }
+
+    def prettyObject(fields: immutable.ListMap[String, JValue]): Unit = {
+      sb.append('{')
+      val spaces = " " * (indent + IndentWidth)
+      var isFirst = true
+      fields.foreach { f =>
+        val (key, value) = f
+        if (value.isDefined) {
+          if(!isFirst) sb.append(",\n") else { sb.append('\n'); isFirst = false }
+          sb.append(spaces)
+          renderStr(key, sb)
+          sb.append(": ")
+          renderRecursive(value, sb, pretty = true, indent + IndentWidth)
+        }
+      }
+      if (!isFirst) {
+        sb.append('\n')
+        sb.append(" " * indent)
+      }
+      sb.append('}')
     }
 
     value match {
@@ -74,12 +122,11 @@ private [zeison] object Rendering {
       case JNull            => sb.append("null")
       case JBoolean(v)      => sb.append(v)
       case num: JNum        => sb.append(num.valueAsString)
-      case JString(v)       => renderStr(v)
-      case JObject(fields)  => renderObject(fields)
-      case JArray(elems)    => renderArray(elems)
+      case JString(v)       => renderStr(v, sb)
+      case JObject(fields)  => if (pretty) prettyObject(fields) else compactObject(fields)
+      case JArray(elems)    => if (pretty) prettyArray(elems) else compactArray(elems)
       case custom: JCustom  => sb.append(custom.valueAsJson)
     }
   }
-
 
 }
