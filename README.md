@@ -11,10 +11,9 @@ valid data types (+ null). It's not rocket science.
 
 Zeison tries to simplify the JSON parsing, management and rendering so that
 you don't need to know any implicit values or conversions. Under the hood, it 
-uses [json-smart](https://code.google.com/p/json-smart/) for parsing and rendering
-so it is **fast** too.
+uses [jawn](https://github.com/non/jawn) for parsing so it is **fast** too.
 
-Zeison is extremely lightweight - binaries (including json-smart) require under 
+Zeison is extremely lightweight - binaries (including jawn-parser) require under 
 150KB of space.
 
 
