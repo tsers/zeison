@@ -73,7 +73,7 @@ private [zeison] object Rendering {
       case JUndefined       => new ZeisonException("Can't render JUndefined")
       case JNull            => sb.append("null")
       case JBoolean(v)      => sb.append(v)
-      case JNum(v)          => sb.append(v)
+      case num: JNum        => sb.append(num.valueAsString)
       case JString(v)       => renderStr(v)
       case JObject(fields)  => renderObject(fields)
       case JArray(elems)    => renderArray(elems)

@@ -1,18 +1,18 @@
 package org.tsers.zeison
 
-import java.io.{ByteArrayInputStream, StringReader}
+import java.io.ByteArrayInputStream
 
 class ParsingSpec extends BaseSpec {
-  import Zeison._
+  import org.tsers.zeison.Zeison._
 
   describe("JSON parsing") {
     describe("type support") {
       it("returns JNum if top element is an integer number") {
-        parse("123") should equal(JNum("123"))
+        parse("123") should equal(JParsedNum("123"))
       }
 
       it("returns JNum if top element is a floating point value") {
-        parse("123.1") should equal(JNum("123.1"))
+        parse("123.1") should equal(JParsedNum("123.1"))
       }
 
       it("returns JString if top element is a string") {

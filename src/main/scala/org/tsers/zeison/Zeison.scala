@@ -127,24 +127,24 @@ object Zeison {
     }
 
     def isInt: Boolean = this match {
-      case n: JNum if n._isInt => true
-      case _                   => false
+      case n: JNum if !n.hasDecimals => true
+      case _                         => false
     }
 
     def toLong: Long = this match {
-      case n: JNum if n._isInt => n._toLong
-      case _                   => throw new ZeisonException(s"$this can't be cast to number")
+      case n: JNum => n.valueAsLong
+      case _       => throw new ZeisonException(s"$this can't be cast to integer value")
     }
 
     def toInt: Int = this.toLong.toInt
 
     def isDouble: Boolean = this match {
-      case n: JNum if !n._isInt => true
-      case _                    => false
+      case n: JNum if n.hasDecimals => true
+      case _                        => false
     }
 
     def toDouble: Double = this match {
-      case n: JNum => n._toDbl
+      case n: JNum => n.valueAsDouble
       case _       => throw new ZeisonException(s"$this can't be cast to double")
     }
 
@@ -209,10 +209,36 @@ object Zeison {
 
   case class JBoolean(value: Boolean) extends JValue
 
-  case class JNum(value: String) extends JValue {
-    private[zeison] def _isInt = !value.exists(ch => ch == '.' || ch == 'e' || ch == 'E')
-    private[zeison] def _toLong = value.toLong
-    private[zeison] def _toDbl = value.toDouble
+  sealed abstract class JNum extends JValue {
+    def hasDecimals: Boolean
+    def valueAsLong: Long
+    def valueAsDouble: Double
+    def valueAsString: String
+    override def equals(other: Any) = other match {
+      case n: JNum => valueAsString == n.valueAsString
+      case _       => false
+    }
+  }
+
+  case class JParsedNum(value: String) extends JNum {
+    def hasDecimals    = value.exists(ch => ch == '.' || ch == 'e' || ch == 'E')
+    def valueAsLong    = if (hasDecimals) throw new ZeisonException(s"$this can't be cast to integer value") else value.toLong
+    def valueAsDouble  = value.toDouble
+    def valueAsString  = value
+  }
+
+  case class JInt(value: Long) extends JNum {
+    def hasDecimals    = false
+    def valueAsLong    = value
+    def valueAsDouble  = value.toDouble
+    def valueAsString  = value.toString
+  }
+
+  case class JDouble(value: Double) extends JNum {
+    def hasDecimals    = true
+    def valueAsLong    = throw new ZeisonException(s"$this can't be cast to integer value")
+    def valueAsDouble  = value
+    def valueAsString  = value.toString
   }
 
   case class JString(value: String) extends JValue
@@ -240,8 +266,8 @@ object Zeison {
       def jnull() = JNull
       def jfalse() = JBoolean(false)
       def jtrue() = JBoolean(true)
-      def jnum(s: String) = JNum(s)
-      def jint(s: String) = JNum(s)
+      def jnum(s: String) = JParsedNum(s)
+      def jint(s: String) = JParsedNum(s)
       def jstring(s: String) = JString(s)
 
       def singleContext() = new FContext[JValue] {
@@ -289,7 +315,12 @@ object Zeison {
         case value: JValue           => value
         case valueOpt: Option[_]     => valueOpt.map(toJValue).getOrElse(JUndefined)
         case value: Boolean          => JBoolean(value)
-        case value: Number           => JNum(value.toString)
+        case value: Float            => JDouble(value)
+        case value: Double           => JDouble(value)
+        case value: BigDecimal       => JDouble(value.toDouble)
+        case value: java.lang.Float  => JDouble(Float.unbox(value))
+        case value: java.lang.Double => JDouble(Double.unbox(value))
+        case value: Number           => JInt(value.longValue())
         case value: Char             => JString(value.toString)
         case value: String           => JString(value)
         case fields: LMap            => JObject(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k, _)) })
@@ -301,11 +332,15 @@ object Zeison {
     }
 
     def valueOf(jValue: JValue): Option[Any] = {
+      def extractNum(num: JNum): Any = {
+        if (num.hasDecimals) num.valueAsDouble else num.valueAsLong
+      }
+
       jValue match {
         case JUndefined      => None
         case JNull           => Some(null)
         case JBoolean(value) => Some(value)
-        case JNum(value)     => Some(value)
+        case num: JNum       => Some(extractNum(num))
         case JString(value)  => Some(value)
         case JObject(value)  => Some(value)
         case JArray(value)   => Some(value)
