@@ -73,6 +73,14 @@ class SmokeTests extends FunSuite {
     val config = Map("version" -> 2)
     assert(json.render(json.from(config)) == """{"version":2}""")
 
+    // pretty rendering
+    assert(json.renderPretty(json.from(config)) ==
+      """
+        |{
+        |  "version": 2
+        |}
+      """.stripMargin.trim)
+
     // custom types building and rendering
     val now = new Date()
     val customJson = json.obj("createdAt" -> JDate(now))
