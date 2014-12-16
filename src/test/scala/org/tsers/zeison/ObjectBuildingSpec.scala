@@ -37,7 +37,7 @@ class ObjectBuildingSpec extends BaseSpec {
     }
 
     it("supports building objects from Scala maps") {
-      val json = obj.from(Map(
+      val json = from(Map(
         "foo" -> "bar",
         "int" -> 1
       ))
@@ -52,7 +52,7 @@ class ObjectBuildingSpec extends BaseSpec {
     }
 
     it("supports building arrays from Scala iterables") {
-      val json = arr.from(Seq(1, "foobar"))
+      val json = from(Seq(1, "foobar"))
       json should equal(parse(
         """
           | [ 1, "foobar" ]

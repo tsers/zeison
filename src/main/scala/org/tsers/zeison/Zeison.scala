@@ -13,6 +13,9 @@ object Zeison {
   import scala.collection.immutable
   import org.tsers.zeison.Zeison.internal._
 
+  /*
+   * JSON parsing
+   */
 
   def parse(input: String): JValue = {
     implicit val facade = new ZeisonFacade
@@ -30,27 +33,40 @@ object Zeison {
     }
   }
 
+  /*
+   * JSON building
+   */
+
+  def from(any: Any): JValue = {
+    toJValue(any)
+  }
+
   object obj {
-    def apply(fields: (String, Any)*): JObject = from(fields)
-
-    def from(fields: Iterable[(String, _)]): JObject = {
-      JObject(immutable.ListMap(fields.map { case (k: String, v: Any) => (k, toJValue(v)) }.filter(_._2.isDefined).toList: _*))
-    }
-
     def empty = JObject(immutable.ListMap.empty)
+
+    @deprecated
+    def from(fields: Map[String, Any]) = Zeison.from(fields)
+
+    def apply(fields: (String, Any)*): JObject = {
+      from(immutable.ListMap(fields.toList: _*)).asInstanceOf[JObject]
+    }
   }
 
   object arr {
-    def apply(elems: Any*): JArray = from(elems)
-
-    def from(iterable: Iterable[_]): JArray = {
-      JArray(iterable.map(toJValue).filter(_.isDefined).toVector)
-    }
-
     def empty = JArray(Vector.empty)
+
+    @deprecated
+    def from(elems: Iterable[Any]) = Zeison.from(elems)
+
+    def apply(elems: Any*): JArray = {
+      from(elems.toIterable).asInstanceOf[JArray]
+    }
   }
 
 
+  /*
+   * JSON rendering
+   */
   def render(json: JValue): String = Rendering.render(json)
 
 
@@ -265,13 +281,21 @@ object Zeison {
     }
 
     def toJValue(anyValue: Any): JValue = {
+      type LMap   = immutable.ListMap[String, Any]
+      type ObjMap = scala.collection.Map[String, Any]
+      type ObjArr = scala.collection.TraversableOnce[Any]
       anyValue match {
         case null                    => JNull
         case value: JValue           => value
+        case valueOpt: Option[_]     => valueOpt.map(toJValue).getOrElse(JUndefined)
         case value: Boolean          => JBoolean(value)
         case value: Number           => JNum(value.toString)
         case value: Char             => JString(value.toString)
         case value: String           => JString(value)
+        case fields: LMap            => JObject(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k, _)) })
+        case fields: ObjMap          => JObject(immutable.ListMap(fields.flatMap { case (k, v) => toJValue(v).toOption.map((k, _)) }.toList: _*))
+        case elems: ObjArr           => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
+        case elems: Array[_]         => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
         case value                   => throw new ZeisonException(s"Can't parse value ($value) to JValue")
       }
     }
