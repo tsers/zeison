@@ -202,6 +202,13 @@ object Zeison {
         case _          => throw new ZeisonException(s"$this can't be cast to '${manifest.runtimeClass}'")
       }
     }
+
+    def copy(fields: (String, Any)*): JValue = {
+      this match {
+        case JObject(old) => JObject(mergeFields(old, fields.map { case (name, value) => (name, toJValue(value)) }))
+        case _            => throw new ZeisonException(s"Can't modify fields from $this")
+      }
+    }
   }
 
   case object JUndefined extends JValue
@@ -321,6 +328,16 @@ object Zeison {
         def finish = jobject(new FieldMap(fields))
         def isObj = true
       }
+    }
+
+    def mergeFields(oldFields: Iterable[(String, JValue)], newFields: Iterable[(String, JValue)]): Map[String, JValue] = {
+      val merged = new util.LinkedHashMap[String, JValue](oldFields.size + newFields.size)
+      oldFields.foreach { case (name, value) => merged.put(name, value) }
+      newFields.foreach {
+        case (name, JUndefined) => merged.remove(name)
+        case (name, value)      => merged.put(name, value)
+      }
+      new FieldMap(merged)
     }
 
     def toJValue(anyValue: Any): JValue = {
