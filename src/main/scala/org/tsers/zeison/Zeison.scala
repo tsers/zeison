@@ -40,10 +40,14 @@ object Zeison {
    * JSON building
    */
 
+  def toJson(any: Any): JValue = toJValue(any)
+
+  @deprecated
   def from(any: Any): JValue = {
     toJValue(any)
   }
 
+  @deprecated
   object obj {
     def empty = JObject(Map.empty)
 
@@ -54,6 +58,7 @@ object Zeison {
     }
   }
 
+  @deprecated
   object arr {
     def empty = JArray(Vector.empty)
 
