@@ -8,89 +8,101 @@ import org.scalatest.FunSuite
 import scala.util.Try
 
 class SmokeTests extends FunSuite {
-  import org.tsers.zeison.{Zeison => json}
 
   test("smoke tests") {
 
-    val data = json.parse( """
-                        | {
-                        |   "messages": ["tsers", {"msg": "tsers!"}],
-                        |   "meta": {
-                        |     "numKeys": 2,
-                        |     "active": true,
-                        |     "score": 0.6
-                        |   },
-                        |   "response": null
-                        | }""".stripMargin)
+    // parsing
+    // parse: (String) => JValue
+    // parse: (InputStream) => JValue
+    val data = Zeison.parse("""
+                            | {
+                            |   "messages": ["tsers", "TSERS"],
+                            |   "meta": {
+                            |     "numKeys": 2,
+                            |     "active": true,
+                            |     "score": 0.6
+                            |   },
+                            |   "response": null
+                            | }""".stripMargin)
 
-    // conversions
+    // type checking
+    // .isInt .isStr .isBool .isDouble .isArray .isObject .isNull .isDefined
+    assert(data.meta.numKeys.isInt == true)
+
+    // value extraction
     assert(data.meta.numKeys.toInt == 2)
     assert(data.meta.active.toBool == true)
     assert(data.meta.score.toDouble == 0.6)
-    assert(data.meta.toMap.get("numKeys").map(_.toInt) == Some(2))
-    assert(data.messages.toSeq.head.toStr == "tsers")
+    assert(data.meta.toMap.get("numKeys").map(_.toInt) == Some(2)) // .toMap => Map[String, JValue]
+    assert(data.messages.toSeq.head.toStr == "tsers")              // .toSeq => Seq[JValue]
 
-    // type checking
-    assert(data.meta.numKeys.isInt == true) // also .isStr .isBool .isDouble .isArray .isObject .isNull .isDefined
-
-    // traversing
-    assert(data("meta")("numKeys").toInt == 2)
+    // object/array traversal
+    assert(data("meta")("numKeys") == data.meta.numKeys)
     assert(data.messages(0).toStr == "tsers")
-    assert(data.messages(1).msg.toStr == "tsers!")
-    assert(data.messages.filter(_.isObject).map(_.msg.toStr).toSeq == Seq("tsers!"))
 
-    // undefined values
+    // iterable behaviour (=> Iterable[JValue])
+    assert(data.messages.map(_.toStr).toSet == Set("tsers", "TSERS"))
+    assert(data.meta.toSet == Set(data.meta)) // all objects and primitives are handled as single value iterable
+    assert(data.response.toSet == Set.empty)  // all null values and undefined values are handled as empty iterable
+
+    // undefined values and optional extraction
     assert(data.meta.numKeys.isDefined == true)
     assert(data.non_existing.isDefined == false)
     assert(data.messages(-1).isDefined == false)
     assert(data.messages(10).isDefined == false)
-    assert(data.meta.numKeys.toOption.map(_.toInt) == Some(2))
+    assert(data.meta.numKeys.toOption.map(_.toInt) == Some(2))  // .toOption => Option[JValue]
     assert(data.non_existing.toOption == None)
     assert(data.response.toOption == None)
 
-    // exceptions
-    assert(Try(data.messages.toInt).isSuccess == false) // bad type cast
-    assert(Try(data.non_existing.toInt).isSuccess == false) // undefined has no value
-    assert(Try(data.non_existing.sub_field).isSuccess == false)
-    // undefined has no member x
+    // runtime errors
+    assert(Try(data.messages.toInt).isSuccess == false)         // bad type cast
+    assert(Try(data.non_existing.toInt).isSuccess == false)     // undefined has no value
+    assert(Try(data.non_existing.sub_field).isSuccess == false) // undefined has no member x
 
+    // JSON creation
+    // ATTENTION: Zeison is NOT an object mapper!
+    // Only JSON primitive values, Scala Iterables/Maps and Zeison's JValue types are
+    // accepted - other types cause runtime exception
+    val obj = Zeison.toJson(Map(
+      "msg"    -> "tsers!",
+      "meta"   -> data.meta,
+      "primes" -> Seq(1,2,3,5)
+    ))
 
-    val src = json.parse( """
-                       | {
-                       |   "meta": {
-                       |     "numKeys": 2
-                       |   },
-                       |   "response": null
-                       | }""".stripMargin)
+    // immutable field adding
+    // .copy(..) works for JSON objects - other types cause runtime exception
+    val metaWithNewFields = obj.meta.copy("foo" -> "bar", "lol" -> "bal")
+    assert(metaWithNewFields != obj.meta)
+    assert(metaWithNewFields.foo.toStr == "bar")
+    assert(metaWithNewFields.numKeys.toInt == 2)
 
-    // building objects with obj/arr
-    assert(json.render(json.obj("msg" -> "tsers!", "meta" -> src.meta)) == """{"msg":"tsers!","meta":{"numKeys":2}}""")
-    assert(json.render(json.arr(1, json.obj("msg" -> "tsers!"))) == """[1,{"msg":"tsers!"}]""")
+    // immutable field modification
+    val modifiedScore = obj.meta.copy("score" -> "tsers")
+    assert(modifiedScore.score.toStr == "tsers")
+    assert(modifiedScore.numKeys.toInt == 2)
 
-    // building objects from Scala collections
-    val primes = Seq(1, 2, 3, 5)
-    assert(json.render(json.from(primes)) == "[1,2,3,5]")
-    val config = Map("version" -> 2)
-    assert(json.render(json.from(config)) == """{"version":2}""")
+    // immutable field removal
+    val removedScore = obj.meta.copy("score" -> Zeison.JUndefined)
+    assert(removedScore.score.isDefined == false)
+    assert(removedScore.numKeys.isDefined == true)
 
-    // pretty rendering
-    assert(json.renderPretty(json.from(config)) ==
-      """
-        |{
-        |  "version": 2
-        |}
-      """.stripMargin.trim)
+    // object merging (shallow!)
+    val merged = Zeison.toJson(obj.toMap ++ data.toMap)
+    assert(merged.primes.isDefined)
+    assert(merged.messages.isDefined)
+
+    // rendering
+    Zeison.render(obj)
+    Zeison.renderPretty(obj)
 
     // custom types building and rendering
     val now = new Date()
-    val customJson = json.obj("createdAt" -> JDate(now))
-    assert(json.render(customJson) == s"""{"createdAt":"${toISO8601(now)}"}""")
+    val custom = Zeison.toJson(Map("createdAt" -> JDate(now)))
+    assert(Zeison.render(custom) == s"""{"createdAt":"${toISO8601(now)}"}""")
 
     // custom types type checking and extraction
-    assert(customJson.createdAt.is[Date])
-    assert(customJson.createdAt.to[Date] == now)
-    assert(!customJson.createdAt.isInt)
-    assert(Try(customJson.createdAt.toInt).isFailure)
+    assert(custom.createdAt.is[Date])
+    assert(custom.createdAt.to[Date] == now)
   }
 
   def toISO8601(date: Date) = {
