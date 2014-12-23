@@ -45,9 +45,6 @@ object Zeison {
   }
 
   object obj {
-
-    @deprecated
-    def from(fields: Map[String, Any]) = Zeison.from(fields)
     def empty = JObject(Map.empty)
 
     def apply(fields: (String, Any)*): JObject = {
