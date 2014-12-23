@@ -3,7 +3,6 @@ package org.tsers.zeison
 import java.io.InputStream
 import java.nio.channels.Channels
 import java.util
-import java.util.concurrent.atomic.AtomicInteger
 
 import jawn.{FContext, Facade, Parser}
 
@@ -12,10 +11,10 @@ import scala.util.{Failure, Success, Try}
 
 
 object Zeison {
+  import scala.collection.immutable
+  import scala.language.dynamics
   import org.tsers.zeison.Zeison.internal._
 
-import scala.collection.immutable
-  import scala.language.dynamics
 
   /*
    * JSON parsing
@@ -46,21 +45,20 @@ import scala.collection.immutable
   }
 
   object obj {
-    def empty = JObject(immutable.ListMap.empty)
 
     @deprecated
     def from(fields: Map[String, Any]) = Zeison.from(fields)
+    def empty = JObject(Map.empty)
 
     def apply(fields: (String, Any)*): JObject = {
-      Zeison.from(immutable.ListMap(fields.toList: _*)).asInstanceOf[JObject]
+      val fieldMap = new util.LinkedHashMap[String, JValue](fields.size)
+      fields.foreach { case (key, value) => toJValue(value).toOption.foreach(jVal => fieldMap.put(key, jVal)) }
+      JObject(new FieldMap(fieldMap))
     }
   }
 
   object arr {
     def empty = JArray(Vector.empty)
-
-    @deprecated
-    def from(elems: Iterable[Any]) = Zeison.from(elems)
 
     def apply(elems: Any*): JArray = {
       Zeison.from(elems.toIterable).asInstanceOf[JArray]
@@ -74,6 +72,7 @@ import scala.collection.immutable
   def render(json: JValue): String = Rendering.render(json, pretty = false)
 
   def renderPretty(json: JValue): String = Rendering.render(json, pretty = true)
+
 
   sealed abstract class JValue extends Dynamic with Traversable[JValue] {
     override def foreach[U](f: (JValue) => U): Unit = this match {
@@ -265,7 +264,7 @@ import scala.collection.immutable
   private[zeison] object internal {
 
     class FieldMap(fields: java.util.LinkedHashMap[String, JValue]) extends immutable.Map[String, JValue] {
-      import JavaConversions._
+      import scala.collection.JavaConversions._
 
       override def +[B1 >: JValue](kv: (String, B1)): Map[String, B1] = mapAsScalaMap(fields).toMap + kv
 
@@ -300,29 +299,29 @@ import scala.collection.immutable
       }
 
       def arrayContext() = new FContext[JValue] {
-        val vs = new util.LinkedList[JValue]()
-        def add(s: String) { vs.add(jstring(s)) }
-        def add(v: JValue) { vs.add(v) }
-        def finish = jarray(JavaConversions.iterableAsScalaIterable(vs).toVector)
+        val elems = new util.LinkedList[JValue]()
+        def add(s: String) { elems.add(jstring(s)) }
+        def add(v: JValue) { elems.add(v) }
+        def finish = jarray(JavaConversions.iterableAsScalaIterable(elems).toVector)
         def isObj = false
       }
 
       def objectContext() = new FContext[JValue] {
         var key: String = null
-        val vs = new java.util.LinkedHashMap[String, JValue]()
+        val fields = new java.util.LinkedHashMap[String, JValue]()
         def add(s: String) {
           if (key == null) {
             key = s
           } else {
-            vs.put(key, jstring(s))
+            fields.put(key, jstring(s))
             key = null
           }
         }
         def add(v: JValue) {
-          vs.put(key, v)
+          fields.put(key, v)
           key = null
         }
-        def finish = jobject(new FieldMap(vs))
+        def finish = jobject(new FieldMap(fields))
         def isObj = true
       }
     }
