@@ -2,16 +2,20 @@ package org.tsers.zeison
 
 import java.io.InputStream
 import java.nio.channels.Channels
+import java.util
+import java.util.concurrent.atomic.AtomicInteger
 
 import jawn.{FContext, Facade, Parser}
 
+import scala.collection.JavaConversions
 import scala.util.{Failure, Success, Try}
 
 
 object Zeison {
-  import scala.language.dynamics
-  import scala.collection.immutable
   import org.tsers.zeison.Zeison.internal._
+
+import scala.collection.immutable
+  import scala.language.dynamics
 
   /*
    * JSON parsing
@@ -170,7 +174,7 @@ object Zeison {
     }
 
     def toMap: Map[String, JValue] = this match {
-      case JObject(fields) => fields.toMap
+      case JObject(fields) => fields
       case _               => throw new ZeisonException(s"$this can't be cast to map")
     }
 
@@ -244,7 +248,7 @@ object Zeison {
 
   case class JString(value: String) extends JValue
 
-  case class JObject(fields: immutable.ListMap[String, JValue]) extends JValue
+  case class JObject(fields: Map[String, JValue]) extends JValue
 
   case class JArray(elems: Vector[JValue]) extends JValue
 
@@ -259,11 +263,27 @@ object Zeison {
 
 
   private[zeison] object internal {
-    import scala.collection.mutable
+
+    class FieldMap(fields: java.util.LinkedHashMap[String, JValue]) extends immutable.Map[String, JValue] {
+      import JavaConversions._
+
+      override def +[B1 >: JValue](kv: (String, B1)): Map[String, B1] = mapAsScalaMap(fields).toMap + kv
+
+      override def get(key: String): Option[JValue] = if (fields.containsKey(key)) Some(fields.get(key)) else None
+
+      override def iterator: Iterator[(String, JValue)] = asScalaIterator(fields.entrySet().iterator())
+        .map(e => (e.getKey, e.getValue))
+
+      override def -(key: String): Map[String, JValue] = {
+        val copied = new util.LinkedHashMap[String, JValue](fields)
+        fields.remove(key)
+        new FieldMap(copied)
+      }
+    }
 
     class ZeisonFacade extends Facade[JValue] {
-      def jarray(arr: mutable.ListBuffer[JValue]) = JArray(arr.toVector)
-      def jobject(obj: immutable.ListMap[String, JValue]) = JObject(obj)
+      def jarray(arr: Vector[JValue]) = JArray(arr)
+      def jobject(obj: Map[String, JValue]) = JObject(obj)
       def jnull() = JNull
       def jfalse() = JBoolean(false)
       def jtrue() = JBoolean(true)
@@ -280,29 +300,29 @@ object Zeison {
       }
 
       def arrayContext() = new FContext[JValue] {
-        val vs = mutable.ListBuffer.empty[JValue]
-        def add(s: String) { vs += jstring(s) }
-        def add(v: JValue) { vs += v }
-        def finish = jarray(vs)
+        val vs = new util.LinkedList[JValue]()
+        def add(s: String) { vs.add(jstring(s)) }
+        def add(v: JValue) { vs.add(v) }
+        def finish = jarray(JavaConversions.iterableAsScalaIterable(vs).toVector)
         def isObj = false
       }
 
       def objectContext() = new FContext[JValue] {
         var key: String = null
-        var vs = immutable.ListMap.empty[String, JValue]
+        val vs = new java.util.LinkedHashMap[String, JValue]()
         def add(s: String) {
           if (key == null) {
             key = s
           } else {
-            vs = vs + ((key, jstring(s)))
+            vs.put(key, jstring(s))
             key = null
           }
         }
         def add(v: JValue) {
-          vs = vs.updated(key, v)
+          vs.put(key, v)
           key = null
         }
-        def finish = jobject(vs)
+        def finish = jobject(new FieldMap(vs))
         def isObj = true
       }
     }
@@ -322,8 +342,7 @@ object Zeison {
         case value: Number                 => JInt(value.longValue())
         case value: Char                   => JString(value.toString)
         case value: String                 => JString(value)
-        case f: immutable.ListMap[_,_]     => JObject(f.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) })
-        case f: scala.collection.Map[_,_]  => JObject(immutable.ListMap(f.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) }.toList: _*))
+        case f: scala.collection.Map[_,_]  => JObject(f.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) }.toMap)
         case elems: col.TraversableOnce[_] => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
         case elems: Array[_]               => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
         case value                         => throw new ZeisonException(s"Can't parse value ($value) to JValue")

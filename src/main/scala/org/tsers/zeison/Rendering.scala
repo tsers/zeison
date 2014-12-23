@@ -5,7 +5,6 @@ import org.tsers.zeison.Zeison._
 import scala.annotation.switch
 
 private [zeison] object Rendering {
-  import scala.collection.immutable
 
   private final val Hex = "0123456789ABCDEF".intern()
   private final val IndentWidth = 2
@@ -43,7 +42,7 @@ private [zeison] object Rendering {
       sb.append('"')
     }
 
-    @inline def compactObject(fields: immutable.ListMap[String, JValue]): Unit = {
+    @inline def compactObject(fields: Map[String, JValue]): Unit = {
       sb.append('{')
       var isFirst = true
       fields.foreach { f =>
@@ -96,7 +95,7 @@ private [zeison] object Rendering {
       }
     }
 
-    def prettyObject(fields: immutable.ListMap[String, JValue]): Unit = {
+    def prettyObject(fields: Map[String, JValue]): Unit = {
       sb.append('{')
       val spaces = " " * (indent + IndentWidth)
       var isFirst = true
