@@ -6,14 +6,14 @@ Small, fast and easy-to-use JSON library for Scala.
 
 Oh why? Why must JSON parsing be so challenging in Scala? First you must
 download tons of dependencies, then remember to use right package imports (for
-implicit conversions) and/or implicit formats. C'mon! JSON has only **six** 
+implicit conversions) and/or implicit formats. C'mon! JSON has only **six**
 valid data types (+ null). It's not rocket science.
 
 Zeison tries to simplify the JSON parsing, management and rendering so that
-you don't need to know any implicit values or conversions. Under the hood, it 
+you don't need to know any implicit values or conversions. Under the hood, it
 uses [jawn](https://github.com/non/jawn) for parsing so it is **fast** too.
 
-Zeison is extremely lightweight - binaries (including jawn-parser) require under 
+Zeison is extremely lightweight - binaries (including jawn-parser) require under
 150KB of space.
 
 
@@ -35,8 +35,8 @@ import org.tsers.zeison.Zeison._
 
 ## API
 
-Zeison API is designed to be extremely simple so that all it's features can be
-demonstrated under one hundred LOC.
+Zeison API is designed to be extremely simple so that all its features can be
+demonstrated with one hundred LOC.
 
 ### Parsing
 
@@ -94,7 +94,7 @@ assert(Try(data.non_existing.sub_field).isSuccess == false) // undefined has no 
 
 // JSON creation
 // ATTENTION: Zeison is NOT an object mapper!
-// Only JSON primitive values, Scala Iterables/Maps and Zeison's JValue types are 
+// Only JSON primitive values, Scala Iterables/Maps and Zeison's JValue types are
 // accepted - other types cause runtime exception
 val obj = Zeison.toJson(Map(
   "msg"    -> "tsers!",
@@ -134,9 +134,9 @@ Zeison.renderPretty(obj)
 
 ### Custom types
 
-Some libraries (for example Casbah) enable non-standard JSON types. To support 
-these libraries, Zeison provides a way to define simple custom data types that 
-can be built, extracted and rendered from JSON objects. 
+Some libraries (for example Casbah) enable non-standard JSON types. To support
+these libraries, Zeison provides a way to define simple custom data types that
+can be built, extracted and rendered from JSON objects.
 
 ```scala
 def toISO8601(date: Date) = {
@@ -153,4 +153,4 @@ val custom = Zeison.toJson(Map("createdAt" -> JDate(now)))
 assert(Zeison.render(custom) == s"""{"createdAt":"${toISO8601(now)}"}""")
 assert(custom.createdAt.is[Date])
 assert(custom.createdAt.to[Date] == now)
-``` 
+```
