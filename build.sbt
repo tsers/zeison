@@ -6,8 +6,8 @@ name                := "Zeison"
 version             := "0.6.0"
 profileName         := "org.tsers"
 organization        := "org.tsers.zeison"
-scalaVersion        := "2.10.4"
-crossScalaVersions  := Seq("2.10.4", "2.11.4")
+scalaVersion        := "2.10.5"
+crossScalaVersions  := Seq("2.10.5", "2.11.6")
 
 scalacOptions += "-target:jvm-1.6"
 
