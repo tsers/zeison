@@ -59,6 +59,12 @@ class ParsingSpec extends BaseSpec {
           parse("invalid")  // NOTE: no quotation marks -> invalid element
         }
       }
+      it("throws an exception if given input stream is not valid") {
+        intercept[ZeisonException] {
+          val is = new ByteArrayInputStream("[1, 2".getBytes)
+          parse(is)
+        }
+      }
     }
   }
 }

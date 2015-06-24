@@ -42,31 +42,9 @@ object Zeison {
 
   def toJson(any: Any): JValue = toJValue(any)
 
-  @deprecated
-  def from(any: Any): JValue = {
-    toJValue(any)
-  }
+  def toJObject(fields: (String, Any)*): JObject = toJValue(fields.toMap).asInstanceOf[JObject]
 
-  @deprecated
-  object obj {
-    def empty = JObject(Map.empty)
-
-    def apply(fields: (String, Any)*): JObject = {
-      val fieldMap = new util.LinkedHashMap[String, JValue](fields.size)
-      fields.foreach { case (key, value) => toJValue(value).toOption.foreach(jVal => fieldMap.put(key, jVal)) }
-      JObject(new FieldMap(fieldMap))
-    }
-  }
-
-  @deprecated
-  object arr {
-    def empty = JArray(Vector.empty)
-
-    def apply(elems: Any*): JArray = {
-      Zeison.from(elems.toIterable).asInstanceOf[JArray]
-    }
-  }
-
+  def toJArray(elems: Any*): JArray = toJValue(elems).asInstanceOf[JArray]
 
   /*
    * JSON rendering
@@ -87,11 +65,20 @@ object Zeison {
     // ATTENTION: this must be overridden because otherwise traversable trait
     // will cause StackOverflowError
     override def toString() = {
-      def className = getClass.getSimpleName
+      def str(value: Any) = s"${getClass.getSimpleName}($value)"
+      def extractNum(num: JNum): Any = {
+        if (num.hasDecimals) num.valueAsDouble else num.valueAsLong
+      }
+
       this match {
-        case JNull      => "JNull"
-        case JUndefined => "JUndefined"
-        case jValue     => className + "(" + valueOf(jValue).getOrElse("<invalid>") + ")"
+        case JNull           => "JNull"
+        case JUndefined      => "JUndefined"
+        case num: JNum       => str(extractNum(num))
+        case JBoolean(value) => str(value)
+        case JString(value)  => str(value)
+        case JObject(value)  => str(value)
+        case JArray(value)   => str(value)
+        case custom: JCustom => str(custom.value)
       }
     }
 
@@ -284,7 +271,7 @@ object Zeison {
 
       override def -(key: String): Map[String, JValue] = {
         val copied = new util.LinkedHashMap[String, JValue](fields)
-        fields.remove(key)
+        copied.remove(key)
         new FieldMap(copied)
       }
     }
@@ -355,33 +342,19 @@ object Zeison {
         case value: Float                  => JDouble(value)
         case value: Double                 => JDouble(value)
         case value: BigDecimal             => JDouble(value.toDouble)
-        case value: java.lang.Float        => JDouble(Float.unbox(value))
-        case value: java.lang.Double       => JDouble(Double.unbox(value))
         case value: Number                 => JInt(value.longValue())
         case value: Char                   => JString(value.toString)
         case value: String                 => JString(value)
-        case f: scala.collection.Map[_,_]  => JObject(f.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) }.toMap)
-        case elems: col.TraversableOnce[_] => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
-        case elems: Array[_]               => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
+        case f: scala.collection.Map[_,_]  => JObject(f.flatMap { case (k, v) => toOption(toJValue(v)).map((k.toString, _)) }.toMap)
+        case elems: col.TraversableOnce[_] => JArray(elems.flatMap(e => toOption(toJValue(e))).toVector)
+        case elems: Array[_]               => JArray(elems.flatMap(e => toOption(toJValue(e))).toVector)
         case value                         => throw new ZeisonException(s"Can't parse value ($value) to JValue")
       }
     }
 
-    def valueOf(jValue: JValue): Option[Any] = {
-      def extractNum(num: JNum): Any = {
-        if (num.hasDecimals) num.valueAsDouble else num.valueAsLong
-      }
-
-      jValue match {
-        case JUndefined      => None
-        case JNull           => Some(null)
-        case JBoolean(value) => Some(value)
-        case num: JNum       => Some(extractNum(num))
-        case JString(value)  => Some(value)
-        case JObject(value)  => Some(value)
-        case JArray(value)   => Some(value)
-        case custom: JCustom => Some(custom.value)
-      }
+    def toOption(jValue: JValue): Option[JValue] = {
+      if (jValue.isDefined) Some(jValue) else None
     }
+
   }
 }

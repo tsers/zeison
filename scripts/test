@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+echo "Run unit tests and create coverage report"
+./sbt clean coverage +test coverageReport
