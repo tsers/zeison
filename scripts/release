@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
 echo "Release new version to Maven"
-./sbt clean +publishSigned
+./sbt clean +compile +publishSigned
 ./sbt sonatypeRelease
 echo "Done"
