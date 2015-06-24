@@ -117,7 +117,7 @@ private [zeison] object Rendering {
     }
 
     value match {
-      case JUndefined       => new ZeisonException("Can't render JUndefined")
+      case JUndefined       => throw new ZeisonException("Can't render JUndefined")
       case JNull            => sb.append("null")
       case JBoolean(v)      => sb.append(v)
       case num: JNum        => sb.append(num.valueAsString)
