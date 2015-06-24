@@ -271,7 +271,7 @@ object Zeison {
 
       override def -(key: String): Map[String, JValue] = {
         val copied = new util.LinkedHashMap[String, JValue](fields)
-        fields.remove(key)
+        copied.remove(key)
         new FieldMap(copied)
       }
     }
