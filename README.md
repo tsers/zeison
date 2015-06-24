@@ -156,3 +156,7 @@ assert(Zeison.render(custom) == s"""{"createdAt":"${toISO8601(now)}"}""")
 assert(custom.createdAt.is[Date])
 assert(custom.createdAt.to[Date] == now)
 ```
+
+## License
+
+MIT
