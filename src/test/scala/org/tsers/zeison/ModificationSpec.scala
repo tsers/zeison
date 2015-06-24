@@ -1,7 +1,5 @@
 package org.tsers.zeison
 
-import org.tsers.zeison.Zeison.JUndefined
-
 class ModificationSpec extends BaseSpec {
   import org.tsers.zeison.Zeison._
 
@@ -29,6 +27,13 @@ class ModificationSpec extends BaseSpec {
       val original = toJson(Map("msg" -> "tsers", "num" -> 123))
       val modified = original.copy("num" -> JUndefined)
       modified should equal(toJson(Map("msg" -> "tsers")))
+    }
+
+    it("supports only JSON objects") {
+      val arr = toJArray("1", "2", "3")
+      intercept[ZeisonException] {
+        arr.copy("1" -> "10")
+      }
     }
   }
 

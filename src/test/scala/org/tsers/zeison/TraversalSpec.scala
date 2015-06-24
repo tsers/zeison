@@ -54,6 +54,13 @@ class TraversalSpec extends BaseSpec {
       json(-1) should not be 'defined
     }
 
+    it("throws an exception if trying to access index from undefined") {
+      val json = parse("""{"arr": [1, 5, 2]}""")
+      intercept[ZeisonException] {
+        json.tsers(0)
+      }
+    }
+
     it("returns undefined if trying to access out of array bounds") {
       val json = parse("""{"arr": [1, 5, 2]}""")
       json(3) should not be 'defined
