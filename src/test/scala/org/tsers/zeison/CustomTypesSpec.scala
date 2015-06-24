@@ -21,13 +21,13 @@ class CustomTypesSpec extends BaseSpec {
   describe("Custom types") {
 
     it("can be be added to built JSON object and rendered correctly") {
-      val json = obj("date" -> JDate(parseDate("2011-11-11 11:11")))
+      val json = toJson(Map("date" -> JDate(parseDate("2011-11-11 11:11"))))
       render(json) should equal("""{"date":"2011-11-11T11:11:00"}""")
     }
 
     it("can be tested from the built JSON") {
       val date = JDate(parseDate("2011-11-11 11:11"))
-      val json = obj("date" -> date, "num" -> 2)
+      val json = toJson(Map("date" -> date, "num" -> 2))
 
       json.date.isInt should equal(false)
       json.date.is[Date] should equal(true)
@@ -37,13 +37,13 @@ class CustomTypesSpec extends BaseSpec {
 
     it("can be extracted from the built JSON") {
       val date = JDate(parseDate("2011-11-11 11:11"))
-      val json = obj("date" -> date)
+      val json = toJson(Map("date" -> date))
 
       json.date.to[Date] should equal(date.value)
     }
 
     it("throw an exception if wrong type is extracted from the built JSON") {
-      val json = obj("date" -> JDate(parseDate("2011-11-11 11:11")))
+      val json = toJson(Map("date" -> JDate(parseDate("2011-11-11 11:11"))))
 
       intercept[ZeisonException] {
         json.date.toInt

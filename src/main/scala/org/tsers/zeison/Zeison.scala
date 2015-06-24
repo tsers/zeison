@@ -42,32 +42,6 @@ object Zeison {
 
   def toJson(any: Any): JValue = toJValue(any)
 
-  @deprecated
-  def from(any: Any): JValue = {
-    toJValue(any)
-  }
-
-  @deprecated
-  object obj {
-    def empty = JObject(Map.empty)
-
-    def apply(fields: (String, Any)*): JObject = {
-      val fieldMap = new util.LinkedHashMap[String, JValue](fields.size)
-      fields.foreach { case (key, value) => toJValue(value).toOption.foreach(jVal => fieldMap.put(key, jVal)) }
-      JObject(new FieldMap(fieldMap))
-    }
-  }
-
-  @deprecated
-  object arr {
-    def empty = JArray(Vector.empty)
-
-    def apply(elems: Any*): JArray = {
-      Zeison.from(elems.toIterable).asInstanceOf[JArray]
-    }
-  }
-
-
   /*
    * JSON rendering
    */
