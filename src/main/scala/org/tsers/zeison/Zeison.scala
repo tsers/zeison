@@ -342,8 +342,6 @@ object Zeison {
         case value: Float                  => JDouble(value)
         case value: Double                 => JDouble(value)
         case value: BigDecimal             => JDouble(value.toDouble)
-        case value: java.lang.Float        => JDouble(Float.unbox(value))
-        case value: java.lang.Double       => JDouble(Double.unbox(value))
         case value: Number                 => JInt(value.longValue())
         case value: Char                   => JString(value.toString)
         case value: String                 => JString(value)
