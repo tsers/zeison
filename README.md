@@ -1,5 +1,7 @@
 # Zeison
 
+[![Build Status](https://travis-ci.org/milankinen/zeison.svg?branch=master)](https://travis-ci.org/milankinen/zeison)
+
 Small, fast and easy-to-use JSON library for Scala.
 
 ## Motivation
