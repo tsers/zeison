@@ -1,6 +1,7 @@
 # Zeison
 
 [![Build Status](https://travis-ci.org/milankinen/zeison.svg?branch=master)](https://travis-ci.org/milankinen/zeison)
+[![codecov.io](http://codecov.io/github/milankinen/zeison/coverage.svg?branch=master)](http://codecov.io/github/milankinen/zeison?branch=master)
 
 Small, fast and easy-to-use JSON library for Scala.
 
