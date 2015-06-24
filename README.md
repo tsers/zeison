@@ -104,6 +104,9 @@ val obj = Zeison.toJson(Map(
   "meta"   -> data.meta,
   "primes" -> Seq(1,2,3,5)
 ))
+// or shortcuts for objects and arrays
+val justObj = Zeison.toJObject("foo" -> "bar", "tsers" -> 1)
+val justArr = Zeison.toJArray(1, 2, 3, "tsers", obj)
 
 // immutable field adding
 // .copy(..) works for JSON objects - other types cause runtime exception
