@@ -347,9 +347,9 @@ object Zeison {
         case value: Number                 => JInt(value.longValue())
         case value: Char                   => JString(value.toString)
         case value: String                 => JString(value)
-        case f: scala.collection.Map[_,_]  => JObject(f.flatMap { case (k, v) => toJValue(v).toOption.map((k.toString, _)) }.toMap)
-        case elems: col.TraversableOnce[_] => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
-        case elems: Array[_]               => JArray(elems.flatMap(e => toJValue(e).toOption).toVector)
+        case f: scala.collection.Map[_,_]  => JObject(f.flatMap { case (k, v) => toOption(toJValue(v)).map((k.toString, _)) }.toMap)
+        case elems: col.TraversableOnce[_] => JArray(elems.flatMap(e => toOption(toJValue(e))).toVector)
+        case elems: Array[_]               => JArray(elems.flatMap(e => toOption(toJValue(e))).toVector)
         case value                         => throw new ZeisonException(s"Can't parse value ($value) to JValue")
       }
     }
