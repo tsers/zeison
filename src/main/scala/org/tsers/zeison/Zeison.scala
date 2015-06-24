@@ -42,6 +42,10 @@ object Zeison {
 
   def toJson(any: Any): JValue = toJValue(any)
 
+  def toJObject(fields: (String, Any)*): JObject = toJValue(fields.toMap).asInstanceOf[JObject]
+
+  def toJArray(elems: Any*): JArray = toJValue(elems).asInstanceOf[JArray]
+
   /*
    * JSON rendering
    */
