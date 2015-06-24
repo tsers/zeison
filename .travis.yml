@@ -3,3 +3,7 @@ scala:
    - 2.10.2
    - 2.10.5
    - 2.11.6
+script:
+   - sbt clean scoverage:test
+after_success:
+   - bash <(curl -s https://codecov.io/bash)
