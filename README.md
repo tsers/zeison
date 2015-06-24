@@ -160,3 +160,12 @@ assert(custom.createdAt.to[Date] == now)
 ## License
 
 MIT
+
+
+## Contributing
+
+Please feel free to leave a pull request to `development` branch. Before leaving
+the pull request, please check that tests are passed by using script
+
+    ./scripts/test 
+    
