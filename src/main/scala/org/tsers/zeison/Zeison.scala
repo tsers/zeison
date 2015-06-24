@@ -65,11 +65,20 @@ object Zeison {
     // ATTENTION: this must be overridden because otherwise traversable trait
     // will cause StackOverflowError
     override def toString() = {
-      def className = getClass.getSimpleName
+      def str(value: Any) = s"${getClass.getSimpleName}($value)"
+      def extractNum(num: JNum): Any = {
+        if (num.hasDecimals) num.valueAsDouble else num.valueAsLong
+      }
+
       this match {
-        case JNull      => "JNull"
-        case JUndefined => "JUndefined"
-        case jValue     => className + "(" + valueOf(jValue).getOrElse("<invalid>") + ")"
+        case JNull           => "JNull"
+        case JUndefined      => "JUndefined"
+        case num: JNum       => str(extractNum(num))
+        case JBoolean(value) => str(value)
+        case JString(value)  => str(value)
+        case JObject(value)  => str(value)
+        case JArray(value)   => str(value)
+        case custom: JCustom => str(custom.value)
       }
     }
 
@@ -345,21 +354,9 @@ object Zeison {
       }
     }
 
-    def valueOf(jValue: JValue): Option[Any] = {
-      def extractNum(num: JNum): Any = {
-        if (num.hasDecimals) num.valueAsDouble else num.valueAsLong
-      }
-
-      jValue match {
-        case JUndefined      => None
-        case JNull           => Some(null)
-        case JBoolean(value) => Some(value)
-        case num: JNum       => Some(extractNum(num))
-        case JString(value)  => Some(value)
-        case JObject(value)  => Some(value)
-        case JArray(value)   => Some(value)
-        case custom: JCustom => Some(custom.value)
-      }
+    def toOption(jValue: JValue): Option[JValue] = {
+      if (jValue.isDefined) Some(jValue) else None
     }
+
   }
 }
