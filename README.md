@@ -24,7 +24,7 @@ Zeison is extremely lightweight - binaries (including jawn-parser) require under
 
 To use Zeison in you project, add the following line to your `build.sbt`
 
-    libraryDependencies += "org.tsers.zeison" %% "zeison" % "0.6.0"
+    libraryDependencies += "org.tsers.zeison" %% "zeison" % "0.7.0"
 
 All methods and types are inside object `org.tsers.zeison.Zeison` so in order to
 use them in your code, you must add the following import
