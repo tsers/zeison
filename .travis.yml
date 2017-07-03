@@ -1,9 +1,0 @@
-language: scala
-scala:
-   - 2.10.2
-   - 2.10.5
-   - 2.11.6
-script:
-   - sbt clean coverage test coverageReport
-after_success:
-   - bash <(curl -s https://codecov.io/bash)
