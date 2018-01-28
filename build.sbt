@@ -1,13 +1,8 @@
-import SonatypeKeys._
-
-sonatypeSettings
-
 name                := "Zeison"
 version             := "0.7.0"
-profileName         := "org.tsers"
 organization        := "org.tsers.zeison"
-scalaVersion        := "2.10.5"
-crossScalaVersions  := Seq("2.10.5", "2.11.6")
+scalaVersion        := "2.12.4"
+crossScalaVersions  := Seq("2.10.7", "2.11.12", "2.12.4")
 
 scalacOptions += "-target:jvm-1.6"
 
@@ -21,36 +16,6 @@ credentials += Credentials("Sonatype Nexus Repository Manager",
                            sys.env.getOrElse("SONATYPE_USERNAME", ""),
                            sys.env.getOrElse("SONATYPE_PASSWD", ""))
 
-publishMavenStyle       := true
-pomIncludeRepository    := { _ => false }
 publishArtifact in Test := false
 
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  isSnapshot.value match {
-    case true  => Some("snapshots" at nexus + "content/repositories/snapshots")
-    case false => Some("releases" at nexus + "service/local/staging/deploy/maven2")
-  }
-}
-
-pomExtra := (
-  <url>https://github.com/milankinen/zeison</url>
-    <licenses>
-      <license>
-        <name>MIT</name>
-        <url>http://opensource.org/licenses/MIT</url>
-        <distribution>repo</distribution>
-      </license>
-    </licenses>
-    <scm>
-      <url>git@github.com:milankinen/zeison.git</url>
-      <connection>scm:git:git@github.com:milankinen/zeison.git</connection>
-    </scm>
-    <developers>
-      <developer>
-        <id>milankinen</id>
-        <name>Matti Lankinen</name>
-        <url>https://github.com/milankinen</url>
-      </developer>
-    </developers>
-  )
+publishTo := sonatypePublishTo.value
