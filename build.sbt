@@ -10,12 +10,6 @@ libraryDependencies += "org.spire-math" %% "jawn-parser" % "0.11.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.3" % "test"
 
-
-credentials += Credentials("Sonatype Nexus Repository Manager",
-                           "oss.sonatype.org",
-                           sys.env.getOrElse("SONATYPE_USERNAME", ""),
-                           sys.env.getOrElse("SONATYPE_PASSWD", ""))
-
 publishArtifact in Test := false
 
 publishTo := sonatypePublishTo.value
