@@ -1,7 +1,7 @@
 # Zeison
 
-[![Build Status](https://travis-ci.org/milankinen/zeison.svg?branch=master)](https://travis-ci.org/milankinen/zeison)
-[![codecov.io](http://codecov.io/github/milankinen/zeison/coverage.svg?branch=master)](http://codecov.io/github/milankinen/zeison?branch=master)
+[![Build Status](https://img.shields.io/travis/tsers/zeison/master.svg?style=flat-square)](https://travis-ci.org/tsers/zeison)
+[![Coverage](https://img.shields.io/coveralls/github/tsers/zeison.svg?style=flat-square)](https://coveralls.io/github/tsers/zeison)
 
 Small, fast and easy-to-use JSON library for Scala.
 
@@ -24,7 +24,7 @@ Zeison is extremely lightweight - binaries (including jawn-parser) require under
 
 To use Zeison in you project, add the following line to your `build.sbt`
 
-    libraryDependencies += "org.tsers.zeison" %% "zeison" % "0.7.0"
+    libraryDependencies += "org.tsers.zeison" %% "zeison" % "0.8.0"
 
 All methods and types are inside object `org.tsers.zeison.Zeison` so in order to
 use them in your code, you must add the following import
@@ -165,11 +165,3 @@ assert(custom.createdAt.to[Date] == now)
 
 MIT
 
-
-## Contributing
-
-Please feel free to leave a pull request to `development` branch. Before leaving
-the pull request, please check that tests are passed by using script
-
-    ./scripts/test 
-    
