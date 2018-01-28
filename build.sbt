@@ -11,7 +11,7 @@ crossScalaVersions  := Seq("2.10.5", "2.11.6")
 
 scalacOptions += "-target:jvm-1.6"
 
-libraryDependencies += "org.spire-math" %% "jawn-parser" % "0.7.1"
+libraryDependencies += "org.spire-math" %% "jawn-parser" % "0.11.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.2" % "test"
 

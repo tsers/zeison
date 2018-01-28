@@ -282,13 +282,12 @@ object Zeison {
       def jnull() = JNull
       def jfalse() = JBoolean(false)
       def jtrue() = JBoolean(true)
-      def jnum(s: String) = JParsedNum(s)
-      def jint(s: String) = JParsedNum(s)
-      def jstring(s: String) = JString(s)
+      def jnum(s: CharSequence, decIndex: Int, expIndex: Int) = JParsedNum(s.toString)
+      def jstring(s: CharSequence) = JString(s.toString)
 
       def singleContext() = new FContext[JValue] {
         var value: JValue = _
-        def add(s: String) { value = jstring(s) }
+        def add(s: CharSequence) { value = jstring(s.toString) }
         def add(v: JValue) { value = v }
         def finish = value
         def isObj = false
@@ -296,7 +295,7 @@ object Zeison {
 
       def arrayContext() = new FContext[JValue] {
         val elems = new util.LinkedList[JValue]()
-        def add(s: String) { elems.add(jstring(s)) }
+        def add(s: CharSequence) { elems.add(jstring(s.toString)) }
         def add(v: JValue) { elems.add(v) }
         def finish = jarray(JavaConversions.iterableAsScalaIterable(elems).toVector)
         def isObj = false
@@ -305,9 +304,9 @@ object Zeison {
       def objectContext() = new FContext[JValue] {
         var key: String = null
         val fields = new java.util.LinkedHashMap[String, JValue]()
-        def add(s: String) {
+        def add(s: CharSequence) {
           if (key == null) {
-            key = s
+            key = s.toString
           } else {
             fields.put(key, jstring(s))
             key = null
