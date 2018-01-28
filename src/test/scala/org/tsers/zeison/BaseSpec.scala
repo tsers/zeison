@@ -1,5 +1,5 @@
 package org.tsers.zeison
 
-import org.scalatest.{ShouldMatchers, FunSpec}
+import org.scalatest.{FunSpec, Matchers}
 
-abstract class BaseSpec extends FunSpec with ShouldMatchers
+abstract class BaseSpec extends FunSpec with Matchers

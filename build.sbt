@@ -13,7 +13,7 @@ scalacOptions += "-target:jvm-1.6"
 
 libraryDependencies += "org.spire-math" %% "jawn-parser" % "0.11.1"
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.2" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.3" % "test"
 
 
 credentials += Credentials("Sonatype Nexus Repository Manager",
