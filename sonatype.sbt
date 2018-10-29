@@ -2,7 +2,7 @@ useGpg := true
 
 useGpgAgent := true
 
-usePgpKeyHex("1998fefd0d74156b")
+usePgpKeyHex("9DD8C3E9")
 
 sonatypeProfileName := "org.tsers"
 
