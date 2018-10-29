@@ -1,6 +1,24 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-echo "Release new version to Maven"
+mkdir -p .build-cache
+mkdir -p target
+echo '#!/bin/bash
+mkdir -p /root/.gnupg && chmod 600 /root/.gnupg
+for k in /gnupg/keyrings/*; do
+  cp $k /root/.gnupg/
+done
+export GPG_TTY=$(tty)
 ./sbt clean +compile +publishSigned
 ./sbt sonatypeRelease
-echo "Done"
+' > target/entrypoint.sh
+
+docker run --rm -ti \
+  -e SONATYPE_USERNAME=${SONATYPE_USERNAME} \
+  -e SONATYPE_PASSWD=${SONATYPE_PASSWD} \
+  -v $(cd $(dirname $0)/../.build-cache && pwd):/root/.ivy2 \
+  -v $(cd $(dirname $0)/.. && pwd):/build \
+  -v $HOME/.gnupg:/gnupg:ro \
+  -w /build \
+  openjdk:8-jdk \
+  sh target/entrypoint.sh
