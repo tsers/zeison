@@ -4,9 +4,8 @@ import java.io.InputStream
 import java.nio.channels.Channels
 import java.util
 
-import jawn.{FContext, Facade, Parser}
+import org.typelevel.jawn.{Facade, Parser}
 
-import scala.collection.JavaConversions
 import scala.util.{Failure, Success, Try}
 
 
@@ -59,7 +58,7 @@ object Zeison {
       case JUndefined     =>
       case JNull          =>
       case JArray(values) => values.foreach(f)
-      case jValue         => f(jValue)
+      case jval           => f(jval)
     }
 
     // ATTENTION: this must be overridden because otherwise traversable trait
@@ -197,7 +196,7 @@ object Zeison {
 
     def copy(fields: (String, Any)*): JValue = {
       this match {
-        case JObject(old) => JObject(mergeFields(old, fields.map { case (name, value) => (name, toJValue(value)) }))
+        case JObject(old) => JObject(applyFieldChanges(old, fields.map { case (name, value) => (name, toJValue(value)) }))
         case _            => throw new ZeisonException(s"Can't modify fields from $this")
       }
     }
@@ -259,76 +258,23 @@ object Zeison {
 
   private[zeison] object internal {
 
-    class FieldMap(fields: java.util.LinkedHashMap[String, JValue]) extends immutable.Map[String, JValue] {
-      import scala.collection.JavaConversions._
-
-      override def +[B1 >: JValue](kv: (String, B1)): Map[String, B1] = mapAsScalaMap(fields).toMap + kv
-
-      override def get(key: String): Option[JValue] = if (fields.containsKey(key)) Some(fields.get(key)) else None
-
-      override def iterator: Iterator[(String, JValue)] = asScalaIterator(fields.entrySet().iterator())
-        .map(e => (e.getKey, e.getValue))
-
-      override def -(key: String): Map[String, JValue] = {
-        val copied = new util.LinkedHashMap[String, JValue](fields)
-        copied.remove(key)
-        new FieldMap(copied)
-      }
-    }
-
-    class ZeisonFacade extends Facade[JValue] {
-      def jarray(arr: Vector[JValue]) = JArray(arr)
-      def jobject(obj: Map[String, JValue]) = JObject(obj)
-      def jnull() = JNull
-      def jfalse() = JBoolean(false)
-      def jtrue() = JBoolean(true)
+    class ZeisonFacade extends Facade.MutableFacade[JValue] {
+      def jarray(arr: scala.collection.mutable.ArrayBuffer[JValue]) = JArray(arr.toVector)
+      def jobject(obj: scala.collection.mutable.Map[String, JValue]) = JObject(obj.toMap)
+      def jnull = JNull
+      def jfalse = JBoolean(false)
+      def jtrue = JBoolean(true)
       def jnum(s: CharSequence, decIndex: Int, expIndex: Int) = JParsedNum(s.toString)
       def jstring(s: CharSequence) = JString(s.toString)
-
-      def singleContext() = new FContext[JValue] {
-        var value: JValue = _
-        def add(s: CharSequence) { value = jstring(s.toString) }
-        def add(v: JValue) { value = v }
-        def finish = value
-        def isObj = false
-      }
-
-      def arrayContext() = new FContext[JValue] {
-        val elems = new util.LinkedList[JValue]()
-        def add(s: CharSequence) { elems.add(jstring(s.toString)) }
-        def add(v: JValue) { elems.add(v) }
-        def finish = jarray(JavaConversions.iterableAsScalaIterable(elems).toVector)
-        def isObj = false
-      }
-
-      def objectContext() = new FContext[JValue] {
-        var key: String = null
-        val fields = new java.util.LinkedHashMap[String, JValue]()
-        def add(s: CharSequence) {
-          if (key == null) {
-            key = s.toString
-          } else {
-            fields.put(key, jstring(s))
-            key = null
-          }
-        }
-        def add(v: JValue) {
-          fields.put(key, v)
-          key = null
-        }
-        def finish = jobject(new FieldMap(fields))
-        def isObj = true
-      }
     }
 
-    def mergeFields(oldFields: Iterable[(String, JValue)], newFields: Iterable[(String, JValue)]): Map[String, JValue] = {
-      val merged = new util.LinkedHashMap[String, JValue](oldFields.size + newFields.size)
-      oldFields.foreach { case (name, value) => merged.put(name, value) }
-      newFields.foreach {
-        case (name, JUndefined) => merged.remove(name)
-        case (name, value)      => merged.put(name, value)
+    def applyFieldChanges(obj: Map[String, JValue], changes: Iterable[(String, JValue)]): Map[String, JValue] = {
+      changes.foldLeft(obj) { (result, change) => 
+        change match {
+          case (name, JUndefined) => result - name
+          case (name, value)      => result + (name -> value)
+        }
       }
-      new FieldMap(merged)
     }
 
     def toJValue(anyValue: Any): JValue = {

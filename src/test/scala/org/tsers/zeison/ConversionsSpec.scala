@@ -81,6 +81,8 @@ class ConversionsSpec extends BaseSpec {
     it("supports objects") {
       json.obj should be('object)
       json.bool should not be 'object
+      json.obj.foo.toInt should equal(1)
+      json.obj.bar.toInt should equal(2)
     }
 
     it("supports arrays") {
@@ -92,7 +94,7 @@ class ConversionsSpec extends BaseSpec {
 
   describe("JSON conversions") {
     it("support object casting to map") {
-      json.obj.toMap.mapValues(_.toInt) should equal(Map("foo" -> 1, "bar" -> 2))
+      json.obj.toMap.view.map(kv => (kv._1, kv._2.toInt)).toMap should equal(Map("foo" -> 1, "bar" -> 2))
       intercept[ZeisonException] {
         json.int.toMap
       }
