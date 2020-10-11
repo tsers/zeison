@@ -1,5 +1,5 @@
 name                := "Zeison"
-version             := "0.8.0"
+version             := "0.9.0"
 organization        := "org.tsers.zeison"
 scalaVersion        := "2.12.12"
 crossScalaVersions  := Seq("2.12.12")
