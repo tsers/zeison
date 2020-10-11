@@ -1,8 +1,8 @@
 language: scala
 scala:
-  - 2.12.12
+  - 2.13.3
 script:
   - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport
   - sbt ++$TRAVIS_SCALA_VERSION coverageAggregate
 after_success:
-  - if [[ $TRAVIS_SCALA_VERSION == 2.12.* ]]; then sbt coveralls; fi
+  - if [[ $TRAVIS_SCALA_VERSION == 2.13.* ]]; then sbt coveralls; fi

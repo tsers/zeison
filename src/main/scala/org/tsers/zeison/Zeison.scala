@@ -61,6 +61,13 @@ object Zeison {
       case jval           => f(jval)
     }
 
+    override def iterator = this match {
+      case JUndefined     => List().iterator
+      case JNull          => List().iterator
+      case JArray(values) => values.iterator
+      case jval           => List(jval).iterator
+    }
+
     // ATTENTION: this must be overridden because otherwise traversable trait
     // will cause StackOverflowError
     override def toString() = {

@@ -1,8 +1,8 @@
 name                := "Zeison"
 version             := "0.8.0"
 organization        := "org.tsers.zeison"
-scalaVersion        := "2.12.12"
-crossScalaVersions  := Seq("2.12.12")
+scalaVersion        := "2.13.3"
+crossScalaVersions  := Seq("2.13.3")
 
 libraryDependencies += "org.typelevel" %% "jawn-parser" % "1.0.0"
 
