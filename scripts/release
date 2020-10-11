@@ -5,9 +5,9 @@ mkdir -p .build-cache
 mkdir -p target
 echo '#!/bin/bash
 mkdir -p /root/.gnupg && chmod 600 /root/.gnupg
-for k in /gnupg/keyrings/*; do
-  cp $k /root/.gnupg/
-done
+cp -r /gnupg/* /root/.gnupg/
+rm -f /root/.gnupg/S.*
+rm -f /root/.gnupg/*.conf
 export GPG_TTY=$(tty)
 ./sbt clean +compile +publishSigned
 ./sbt sonatypeRelease
